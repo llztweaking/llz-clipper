@@ -1,4 +1,5 @@
 import Fastify, { FastifyInstance } from "fastify";
+import cors from "@fastify/cors";
 import rateLimit from "@fastify/rate-limit";
 import { registerAuthRoutes } from "./routes/auth.routes";
 import { registerAdminRoutes } from "./routes/admin.routes";
@@ -6,8 +7,20 @@ import { registerStreamerRoutes } from "./routes/streamers.routes";
 import { authenticate } from "./middleware/authenticate";
 import { requireAdmin } from "./middleware/requireAdmin";
 
+// The only client is the LLZ CLIPPER desktop app's own Tauri webview — it is
+// never loaded as a public web page, so there is no browser-based CSRF
+// surface to defend against here. We reflect the request's Origin (the
+// desktop app's dev server and its bundled `tauri.localhost` origin, plus
+// localhost for tooling/tests) so the webview can talk to the local API in
+// both `tauri dev` and the packaged build without maintaining an allowlist.
 export function buildApp(): FastifyInstance {
   const app = Fastify({ logger: false });
+
+  app.register(cors, {
+    origin: true,
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  });
 
   app.get("/health", async () => ({ status: "ok" }));
 

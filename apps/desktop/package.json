@@ -1,0 +1,8 @@
+{
+  "name": "@llz-clipper/desktop",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "echo \"Desktop app (Tauri) e a Fase 2 do projeto - ainda nao implementado\" && exit 1"
+  }
+}

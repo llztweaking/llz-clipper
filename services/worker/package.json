@@ -1,0 +1,8 @@
+{
+  "name": "@llz-clipper/worker",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "node --loader tsx src/index.ts"
+  }
+}

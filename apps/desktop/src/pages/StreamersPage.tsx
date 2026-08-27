@@ -8,6 +8,7 @@ export function StreamersPage() {
   const { streamers, loading, create, update, remove } = useStreamers();
   const [editing, setEditing] = useState<Streamer | null>(null);
   const [showForm, setShowForm] = useState(false);
+  const [confirmingId, setConfirmingId] = useState<string | null>(null);
 
   function openCreate() {
     setEditing(null);
@@ -28,6 +29,11 @@ export function StreamersPage() {
     setShowForm(false);
   }
 
+  async function handleConfirmDelete(id: string) {
+    setConfirmingId(null);
+    await remove(id);
+  }
+
   return (
     <div className="streamers-page">
       <div className="page-header">
@@ -43,7 +49,14 @@ export function StreamersPage() {
               <h3>{streamer.name}</h3>
               <p>{streamer.username}</p>
               <button onClick={() => openEdit(streamer)}>Editar</button>
-              <button onClick={() => void remove(streamer.id)}>Excluir</button>
+              {confirmingId === streamer.id ? (
+                <>
+                  <button onClick={() => void handleConfirmDelete(streamer.id)}>Confirmar exclusão?</button>
+                  <button onClick={() => setConfirmingId(null)}>Cancelar</button>
+                </>
+              ) : (
+                <button onClick={() => setConfirmingId(streamer.id)}>Excluir</button>
+              )}
             </div>
           ))}
         </div>

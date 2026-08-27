@@ -3,9 +3,10 @@ import type { LicenseKey } from "../types";
 interface KeyTableProps {
   keys: LicenseKey[];
   onRevoke: (id: string) => void;
+  revokingId?: string | null;
 }
 
-export function KeyTable({ keys, onRevoke }: KeyTableProps) {
+export function KeyTable({ keys, onRevoke, revokingId = null }: KeyTableProps) {
   return (
     <table className="key-table">
       <thead>
@@ -28,7 +29,11 @@ export function KeyTable({ keys, onRevoke }: KeyTableProps) {
             <td>{key.expiresAt ? new Date(key.expiresAt).toLocaleDateString("pt-BR") : "—"}</td>
             <td>
               <button onClick={() => navigator.clipboard.writeText(key.code)}>Copiar</button>
-              {key.status !== "REVOKED" && <button onClick={() => onRevoke(key.id)}>Revogar</button>}
+              {key.status !== "REVOKED" && (
+                <button disabled={revokingId === key.id} onClick={() => onRevoke(key.id)}>
+                  {revokingId === key.id ? "Revogando…" : "Revogar"}
+                </button>
+              )}
             </td>
           </tr>
         ))}

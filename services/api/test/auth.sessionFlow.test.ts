@@ -120,4 +120,18 @@ describe("GET /auth/me", () => {
     const response = await app.inject({ method: "GET", url: "/auth/me" });
     expect(response.statusCode).toBe(401);
   });
+
+  it("includes the active license summary", async () => {
+    const activated = await activate();
+    const response = await app.inject({
+      method: "GET",
+      url: "/auth/me",
+      headers: { authorization: `Bearer ${activated.accessToken}` },
+    });
+    expect(response.statusCode).toBe(200);
+    const body = response.json();
+    expect(body.license).toMatchObject({ plan: "MONTHLY", status: "ACTIVE" });
+    expect(body.license.expiresAt).toBeDefined();
+    expect(body.license.hwid).toBe("hwid-session");
+  });
 });

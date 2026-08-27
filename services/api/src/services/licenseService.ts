@@ -63,3 +63,21 @@ export async function activateKey(input: ActivateKeyInput) {
 
   return { user, key: updatedKey, tokens };
 }
+
+export async function getUserLicenseSummary(userId: string) {
+  const key = await prisma.licenseKey.findFirst({
+    where: { userId, status: "ACTIVE" },
+    include: { device: true },
+    orderBy: { activatedAt: "desc" },
+  });
+
+  if (!key) return null;
+
+  return {
+    plan: key.plan,
+    status: key.status,
+    activatedAt: key.activatedAt,
+    expiresAt: key.expiresAt,
+    hwid: key.device?.hwid ?? null,
+  };
+}

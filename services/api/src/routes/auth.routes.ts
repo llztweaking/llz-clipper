@@ -1,6 +1,6 @@
 import { FastifyInstance } from "fastify";
 import { z } from "zod";
-import { activateKey, LicenseError } from "../services/licenseService";
+import { activateKey, LicenseError, getUserLicenseSummary } from "../services/licenseService";
 import { login, refresh, logout, AuthError } from "../services/authService";
 import { authenticate } from "../middleware/authenticate";
 
@@ -81,6 +81,7 @@ export function registerAuthRoutes(app: FastifyInstance): void {
   });
 
   app.get("/me", { preHandler: authenticate }, async (request, reply) => {
-    return reply.code(200).send({ user: request.authUser });
+    const license = await getUserLicenseSummary(request.authUser!.id);
+    return reply.code(200).send({ user: request.authUser, license });
   });
 }

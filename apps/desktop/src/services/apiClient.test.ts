@@ -33,6 +33,7 @@ describe("rawRequest", () => {
       })
     );
 
+    await expect(rawRequest("/auth/activate-key")).rejects.toBeInstanceOf(ApiError);
     await expect(rawRequest("/auth/activate-key")).rejects.toMatchObject({
       status: 404,
       code: "key_not_found",
@@ -43,6 +44,7 @@ describe("rawRequest", () => {
   it("marks the network store offline and throws network_error when fetch rejects", async () => {
     vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("network down")));
 
+    await expect(rawRequest("/health")).rejects.toBeInstanceOf(ApiError);
     await expect(rawRequest("/health")).rejects.toMatchObject({ code: "network_error" });
     expect(useNetworkStore.getState().offline).toBe(true);
   });

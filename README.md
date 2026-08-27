@@ -3,8 +3,10 @@
 Aplicativo Windows para transformar VODs de streamers em clips verticais
 editados automaticamente. Este repositório contém a **Fase 1 (Fundação)**:
 monorepo, banco de dados, autenticação, licenciamento por key e
-administração. O app desktop e o pipeline de IA/FFmpeg são fases
-posteriores — ver `docs/superpowers/specs/`.
+administração; e a **Fase 2 (Desktop Shell)**: o app Tauri + React com
+login/ativação, sidebar, Streamers, Configurações e Admin. O pipeline de
+IA/FFmpeg (upload de VOD, edição, render) é fase posterior — ver
+`docs/superpowers/specs/`.
 
 ## Requisitos
 
@@ -92,13 +94,31 @@ A resposta traz o `code` (`LLZ-XXXX-XXXX-XXXX`) a ser usado em
 ## Estrutura
 
 ```
-apps/desktop/        # Fase 2 — placeholder
+apps/desktop/        # App Tauri + React (login, streamers, configurações, admin)
 services/api/         # API Fastify (auth, licenciamento, admin, streamers)
 services/worker/       # Fase 3 — placeholder
 packages/database/    # Schema Prisma, migrations, client compartilhado
 packages/shared/      # Geração de key code, hashing de tokens
 packages/types/       # DTOs compartilhados da API
 docs/superpowers/      # Specs e planos de implementação
+```
+
+## Rodando o app desktop (Fase 2)
+
+Com a API rodando (`npm run dev -w @llz-clipper/api`):
+
+```bash
+npm run tauri dev -w @llz-clipper/desktop
+```
+
+Isso abre a janela do LLZ CLIPPER apontando para `http://localhost:3000`.
+Gere uma key de teste (ver seção "Gerando uma key de teste" acima) e use a
+tela de ativação para entrar.
+
+Para gerar o instalador Windows (`LLZ-CLIPPER-Setup.exe`):
+
+```bash
+npm run tauri build -w @llz-clipper/desktop
 ```
 
 ## Notas técnicas relevantes
@@ -116,7 +136,11 @@ docs/superpowers/      # Specs e planos de implementação
 
 ## O que NÃO está implementado nesta fase
 
-- App desktop (Tauri) — Fase 2
+**Fase 2 (Desktop Shell)** está implementada: login/ativação, sidebar,
+Streamers, Configurações (aba Conta) e Admin, todos funcionais contra a
+API real. `/vod`, `/clips`, `/editor` são placeholders "em breve" — seu
+backend ainda não existe (Fases 3-5).
+
 - Upload de VOD, sistema de jobs, FFmpeg — Fase 3
 - Transcrição, análise de áudio/vídeo, detecção de contexto, scoring — Fase 4
 - Editor, preview, render, export — Fase 5

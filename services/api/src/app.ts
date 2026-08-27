@@ -1,4 +1,5 @@
 import Fastify, { FastifyInstance } from "fastify";
+import rateLimit from "@fastify/rate-limit";
 import { registerAuthRoutes } from "./routes/auth.routes";
 import { registerAdminRoutes } from "./routes/admin.routes";
 import { registerStreamerRoutes } from "./routes/streamers.routes";
@@ -12,6 +13,7 @@ export function buildApp(): FastifyInstance {
 
   app.register(
     async (authScope) => {
+      await authScope.register(rateLimit, { max: 20, timeWindow: "1 minute" });
       registerAuthRoutes(authScope);
     },
     { prefix: "/auth" }
@@ -19,6 +21,7 @@ export function buildApp(): FastifyInstance {
 
   app.register(
     async (adminScope) => {
+      await adminScope.register(rateLimit, { max: 30, timeWindow: "1 minute" });
       adminScope.addHook("preHandler", authenticate);
       adminScope.addHook("preHandler", requireAdmin);
       registerAdminRoutes(adminScope);

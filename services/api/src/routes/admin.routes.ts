@@ -41,4 +41,25 @@ export function registerAdminRoutes(app: FastifyInstance): void {
     const key = await revokeKey(id);
     return reply.code(200).send(key);
   });
+
+  app.get("/logs", async (request, reply) => {
+    const query = request.query as Record<string, string | undefined>;
+    const page = Number(query.page ?? 1);
+    const pageSize = Number(query.pageSize ?? 20);
+    const where: Record<string, unknown> = {};
+    if (query.userId) where.userId = query.userId;
+    if (query.action) where.action = query.action;
+
+    const [items, total] = await Promise.all([
+      prisma.usageLog.findMany({
+        where,
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+        orderBy: { createdAt: "desc" },
+      }),
+      prisma.usageLog.count({ where }),
+    ]);
+
+    return reply.code(200).send({ items, total, page, pageSize });
+  });
 }

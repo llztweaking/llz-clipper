@@ -1,6 +1,7 @@
 import Fastify, { FastifyInstance } from "fastify";
 import { registerAuthRoutes } from "./routes/auth.routes";
 import { registerAdminRoutes } from "./routes/admin.routes";
+import { registerStreamerRoutes } from "./routes/streamers.routes";
 import { authenticate } from "./middleware/authenticate";
 import { requireAdmin } from "./middleware/requireAdmin";
 
@@ -23,6 +24,14 @@ export function buildApp(): FastifyInstance {
       registerAdminRoutes(adminScope);
     },
     { prefix: "/admin" }
+  );
+
+  app.register(
+    async (streamerScope) => {
+      streamerScope.addHook("preHandler", authenticate);
+      registerStreamerRoutes(streamerScope);
+    },
+    { prefix: "/streamers" }
   );
 
   return app;

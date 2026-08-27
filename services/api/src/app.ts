@@ -1,5 +1,8 @@
 import Fastify, { FastifyInstance } from "fastify";
 import { registerAuthRoutes } from "./routes/auth.routes";
+import { registerAdminRoutes } from "./routes/admin.routes";
+import { authenticate } from "./middleware/authenticate";
+import { requireAdmin } from "./middleware/requireAdmin";
 
 export function buildApp(): FastifyInstance {
   const app = Fastify({ logger: false });
@@ -11,6 +14,15 @@ export function buildApp(): FastifyInstance {
       registerAuthRoutes(authScope);
     },
     { prefix: "/auth" }
+  );
+
+  app.register(
+    async (adminScope) => {
+      adminScope.addHook("preHandler", authenticate);
+      adminScope.addHook("preHandler", requireAdmin);
+      registerAdminRoutes(adminScope);
+    },
+    { prefix: "/admin" }
   );
 
   return app;

@@ -1,0 +1,233 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider          = "postgresql"
+  url               = env("DATABASE_URL")
+  shadowDatabaseUrl = env("SHADOW_DATABASE_URL")
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum PlanType {
+  MONTHLY
+  QUARTERLY
+}
+
+enum KeyStatus {
+  UNUSED
+  ACTIVE
+  EXPIRED
+  REVOKED
+}
+
+enum ClipCategory {
+  PLAY
+  FUNNY
+  REACTION
+  FAIL
+  CLUTCH
+  SPOKEN_MOMENT
+  IMPORTANT_MOMENT
+}
+
+enum ClipStatus {
+  DETECTED
+  READY
+  APPROVED
+  REJECTED
+  RENDERING
+  COMPLETED
+  FAILED
+}
+
+enum JobStatus {
+  QUEUED
+  UPLOADING
+  PROCESSING_AUDIO
+  TRANSCRIBING
+  ANALYZING_VIDEO
+  ANALYZING_CONTEXT
+  DETECTING_CLIPS
+  GENERATING_EDIT_PLANS
+  RENDERING
+  COMPLETED
+  FAILED
+}
+
+enum RenderStatus {
+  QUEUED
+  RENDERING
+  COMPLETED
+  FAILED
+}
+
+model User {
+  id            String         @id @default(uuid())
+  email         String         @unique
+  passwordHash  String?
+  role          Role           @default(USER)
+  createdAt     DateTime       @default(now())
+  licenseKeys   LicenseKey[]
+  devices       Device[]
+  streamers     Streamer[]
+  refreshTokens RefreshToken[]
+  usageLogs     UsageLog[]
+}
+
+model LicenseKey {
+  id          String    @id @default(uuid())
+  code        String    @unique
+  plan        PlanType
+  status      KeyStatus @default(UNUSED)
+  usageLimit  Int?
+  createdAt   DateTime  @default(now())
+  activatedAt DateTime?
+  expiresAt   DateTime?
+  revokedAt   DateTime?
+  userId      String?
+  user        User?     @relation(fields: [userId], references: [id])
+  deviceId    String?
+  device      Device?   @relation(fields: [deviceId], references: [id])
+}
+
+model Device {
+  id          String       @id @default(uuid())
+  hwid        String       @unique
+  name        String?
+  userId      String
+  user        User         @relation(fields: [userId], references: [id])
+  createdAt   DateTime     @default(now())
+  lastSeenAt  DateTime?
+  licenseKeys LicenseKey[]
+}
+
+model RefreshToken {
+  id        String    @id @default(uuid())
+  tokenHash String    @unique
+  userId    String
+  user      User      @relation(fields: [userId], references: [id])
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+}
+
+model Streamer {
+  id        String   @id @default(uuid())
+  name      String
+  username  String
+  logoUrl   String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  presetId  String?
+  preset    Preset?  @relation(fields: [presetId], references: [id])
+  watermark Json?
+  createdAt DateTime @default(now())
+  vods      VOD[]
+}
+
+model VOD {
+  id          String    @id @default(uuid())
+  filename    String
+  storagePath String
+  durationSec Int?
+  width       Int?
+  height      Int?
+  fps         Float?
+  sizeBytes   BigInt?
+  codec       String?
+  streamerId  String
+  streamer    Streamer  @relation(fields: [streamerId], references: [id])
+  presetId    String?
+  preset      Preset?   @relation(fields: [presetId], references: [id])
+  createdAt   DateTime  @default(now())
+  jobs        Job[]
+  clips       Clip[]
+}
+
+model Clip {
+  id          String        @id @default(uuid())
+  vodId       String
+  vod         VOD           @relation(fields: [vodId], references: [id])
+  startTime   Float
+  endTime     Float
+  title       String?
+  category    ClipCategory?
+  score       Int?
+  scoreReason String?
+  status      ClipStatus    @default(DETECTED)
+  createdAt   DateTime      @default(now())
+  editPlan    EditPlan?
+  renders     Render[]
+}
+
+model EditPlan {
+  id         String   @id @default(uuid())
+  clipId     String   @unique
+  clip       Clip     @relation(fields: [clipId], references: [id])
+  title      String
+  segments   Json
+  captions   Json?
+  watermark  Json?
+  zooms      Json?
+  sfx        Json?
+  music      Json?
+  format     String   @default("9:16")
+  resolution String   @default("1080x1920")
+  fps        Int      @default(60)
+  updatedAt  DateTime @updatedAt
+}
+
+model Preset {
+  id         String     @id @default(uuid())
+  name       String
+  title      Boolean    @default(true)
+  watermark  Boolean    @default(true)
+  captions   Boolean    @default(true)
+  zoom       Boolean    @default(false)
+  sfx        Boolean    @default(false)
+  music      Boolean    @default(false)
+  format     String     @default("9:16")
+  resolution String     @default("1080x1920")
+  fps        Int        @default(60)
+  streamers  Streamer[]
+  vods       VOD[]
+}
+
+model Job {
+  id          String    @id @default(uuid())
+  vodId       String
+  vod         VOD       @relation(fields: [vodId], references: [id])
+  status      JobStatus @default(QUEUED)
+  progress    Int       @default(0)
+  currentStep String?
+  error       String?
+  createdAt   DateTime  @default(now())
+  startedAt   DateTime?
+  finishedAt  DateTime?
+}
+
+model Render {
+  id         String       @id @default(uuid())
+  clipId     String
+  clip       Clip         @relation(fields: [clipId], references: [id])
+  status     RenderStatus @default(QUEUED)
+  progress   Int          @default(0)
+  outputPath String?
+  error      String?
+  createdAt  DateTime     @default(now())
+  finishedAt DateTime?
+}
+
+model UsageLog {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  action    String
+  metadata  Json?
+  createdAt DateTime @default(now())
+}

@@ -1,0 +1,25 @@
+{
+  "name": "@llz-clipper/api",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "seed:admin": "tsx src/scripts/seedAdmin.ts"
+  },
+  "devDependencies": {
+    "@types/jsonwebtoken": "^9.0.10",
+    "dotenv": "^17.4.2",
+    "tsx": "^4.23.12",
+    "typescript": "^7.0.2",
+    "vitest": "^4.1.11"
+  },
+  "dependencies": {
+    "@llz-clipper/database": "^0.0.0",
+    "@llz-clipper/shared": "^0.0.0",
+    "@llz-clipper/types": "^0.0.0",
+    "fastify": "^5.12.1",
+    "jsonwebtoken": "^9.0.3"
+  }
+}

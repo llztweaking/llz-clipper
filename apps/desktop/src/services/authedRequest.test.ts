@@ -82,4 +82,22 @@ describe("authedRequest", () => {
     await expect(authedRequest("/admin/keys")).rejects.toMatchObject({ code: "forbidden" });
     expect(useAuthStore.getState().sessionExpired).toBe(false);
   });
+
+  it("propagates a retry failure that is unrelated to auth without ending the session", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({ ok: false, status: 401, json: async () => ({ error: "invalid_token", message: "x" }) })
+      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ accessToken: "new-token" }) })
+      .mockResolvedValueOnce({ ok: false, status: 404, json: async () => ({ error: "not_found", message: "Não encontrado" }) });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(authedRequest("/streamers/does-not-exist")).rejects.toMatchObject({ code: "not_found" });
+
+    // The refresh itself succeeded — the new token stays valid and the
+    // session must not be torn down just because the retried request
+    // happened to fail for an unrelated reason (a 404 here).
+    expect(useAuthStore.getState().sessionExpired).toBe(false);
+    expect(useAuthStore.getState().accessToken).toBe("new-token");
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
 });

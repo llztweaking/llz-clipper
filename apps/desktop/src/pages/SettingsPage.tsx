@@ -14,13 +14,17 @@ export function SettingsPage() {
   const { logout } = useAuth();
   const [tab, setTab] = useState<Tab>("account");
   const [me, setMe] = useState<MeResponse | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    setLoading(true);
     authedRequest<MeResponse>("/auth/me")
       .then(setMe)
       .catch(() => {
-        // handled globally via OfflineBanner / session-expired modal
-      });
+        // OfflineBanner / session-expired modal already surface the
+        // underlying problem globally; this just needs to stop spinning.
+      })
+      .finally(() => setLoading(false));
   }, []);
 
   return (
@@ -41,7 +45,9 @@ export function SettingsPage() {
         </button>
       </div>
       {tab === "account" ? (
-        me ? (
+        loading ? (
+          <p>Carregando…</p>
+        ) : me ? (
           <div className="settings-panel">
             <p>Email: {me.user.email}</p>
             <p>Plano: {me.license?.plan ?? "—"}</p>
@@ -54,7 +60,7 @@ export function SettingsPage() {
             <button onClick={() => void logout()}>Sair</button>
           </div>
         ) : (
-          <p>Carregando…</p>
+          <p>Não foi possível carregar os dados da conta.</p>
         )
       ) : (
         <p>Em breve.</p>

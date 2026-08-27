@@ -52,4 +52,14 @@ describe("SettingsPage", () => {
 
     expect(screen.getByText("Em breve.")).toBeInTheDocument();
   });
+
+  it("stops showing the loading state and shows a fallback when /auth/me fails", async () => {
+    vi.mocked(authedRequest).mockRejectedValueOnce(new Error("network down"));
+    render(<SettingsPage />);
+
+    expect(
+      await screen.findByText("Não foi possível carregar os dados da conta.")
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Carregando…")).not.toBeInTheDocument();
+  });
 });

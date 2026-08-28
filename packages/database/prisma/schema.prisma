@@ -141,6 +141,7 @@ model VOD {
   fps         Float?
   sizeBytes   BigInt?
   codec       String?
+  transcript  Json?
   streamerId  String
   streamer    Streamer  @relation(fields: [streamerId], references: [id])
   presetId    String?

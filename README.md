@@ -4,11 +4,14 @@ Aplicativo Windows para transformar VODs de streamers em clips verticais
 editados automaticamente. Este repositório contém a **Fase 1 (Fundação)**:
 monorepo, banco de dados, autenticação, licenciamento por key e
 administração; a **Fase 2 (Desktop Shell)**: o app Tauri + React com
-login/ativação, sidebar, Streamers, Configurações e Admin; e a **Fase 3
+login/ativação, sidebar, Streamers, Configurações e Admin; a **Fase 3
 (Pipeline de VOD)**: seleção de VOD local, cópia para storage e extração
-real de metadados/thumbnail via FFmpeg, através de um Job e worker reais.
-A IA de edição (transcrição, detecção de momentos, render de clipes) é
-fase posterior — ver `docs/superpowers/specs/`.
+real de metadados/thumbnail via FFmpeg, através de um Job e worker reais;
+e a **Fase 4 (Pipeline de IA)**: transcrição real via whisper.cpp, análise
+heurística de áudio/vídeo, detecção de clipes candidatos e rascunho
+automático de plano de edição, com tela de revisão para aprovar/rejeitar
+cada clipe. Edição manual, preview e render de clipes (Fase 5) são a
+próxima etapa — ver `docs/superpowers/specs/`.
 
 ## Requisitos
 
@@ -142,6 +145,39 @@ Os arquivos ficam em `storage/vods/` (VODs copiados) e
 a API/worker são executados (configurável via a variável de ambiente
 `STORAGE_ROOT`).
 
+## Rodando a detecção de clipes por IA (Fase 4)
+
+O worker (o mesmo processo da Fase 3) agora continua o processamento de
+cada VOD além da cópia: transcreve o áudio com whisper.cpp, analisa
+áudio/vídeo, detecta clipes candidatos por heurística, e gera um rascunho
+de plano de edição por clipe — tudo local, sem serviços de IA em nuvem.
+
+Duas variáveis de ambiente adicionais em `.env` (veja `.env.example`):
+
+```bash
+WHISPER_PATH="C:\caminho\para\whisper.cpp\build\bin\whisper-cli.exe"
+WHISPER_MODEL_PATH="C:\caminho\para\whisper.cpp\models\ggml-base.bin"
+```
+
+Para compilar o `whisper.cpp` você mesmo:
+
+```bash
+git clone --depth 1 https://github.com/ggml-org/whisper.cpp.git
+cd whisper.cpp
+cmake -B build -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release
+cmake --build build --config Release -j
+bash models/download-ggml-model.sh base
+```
+
+`WHISPER_PATH` aponta para o `.exe` gerado em `build/bin/`; `WHISPER_MODEL_PATH`
+para o `.bin` baixado em `models/`. Use o modelo multilíngue (`base`, sem
+sufixo `.en`) — o produto é para streamers em português.
+
+Depois que o worker processa um VOD, os clipes detectados aparecem na tela
+**Clipes** do app (selecione o VOD na lista), onde dá para aprovar ou
+rejeitar cada um. Edição de fato (zoom, SFX, música, ajuste de legendas) e
+render continuam sendo Fase 5.
+
 ## Notas técnicas relevantes
 
 - **Prisma está pinado em v6.19.3** (não a versão mais recente instalável).
@@ -159,17 +195,19 @@ a API/worker são executados (configurável via a variável de ambiente
 
 **Fase 2 (Desktop Shell)** está implementada: login/ativação, sidebar,
 Streamers, Configurações (aba Conta) e Admin, todos funcionais contra a
-API real. `/clips`, `/editor` são placeholders "em breve" — seu backend
-ainda não existe (Fases 4-5).
+API real. `/clips` agora é real (ver Fase 4 abaixo); `/editor` continua
+placeholder "em breve" — seu backend é Fase 5.
 
 **Fase 3 (Pipeline de VOD)** está implementada: seleção de VOD local,
 cópia para storage, extração real de metadados e thumbnail via FFmpeg,
-tudo através de um Job e worker reais. Transcrição, análise de
-áudio/vídeo, detecção de momentos, edit plan e render de clipes continuam
-sendo Fases 4-5 — os valores correspondentes de `JobStatus` existem no
-schema mas não têm lógica ainda.
+tudo através de um Job e worker reais.
 
-- Transcrição, análise de áudio/vídeo, detecção de contexto, scoring — Fase 4
+**Fase 4 (Pipeline de IA)** está implementada: transcrição real via
+whisper.cpp, análise heurística de áudio/vídeo (sem LLM), detecção de
+clipes com pontuação e categoria, rascunho automático de EditPlan, e tela
+de revisão (aprovar/rejeitar). Edição manual, preview e render de clipes
+continuam sendo Fase 5.
+
 - Editor, preview, render, export — Fase 5
 - Device-lock / limite de dispositivos por key, renovação de key — schema
   preparado, sem endpoint ainda

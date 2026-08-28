@@ -17,6 +17,8 @@ export interface VideoProcessor {
   probe(filePath: string): Promise<VideoMetadata>;
   generateThumbnail(filePath: string, outputPath: string, atSeconds: number): Promise<void>;
   getStatus(): Promise<FfmpegStatus>;
+  extractAudio(filePath: string, outputPath: string): Promise<void>;
+  detectSceneChanges(filePath: string, threshold?: number): Promise<number[]>;
 }
 
 export interface FfprobeStream {

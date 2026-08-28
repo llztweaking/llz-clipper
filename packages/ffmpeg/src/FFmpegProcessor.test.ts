@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
-import { mkdtemp, rm, stat } from "node:fs/promises";
+import { mkdtemp, rm, stat, readFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { FFmpegProcessor } from "./FFmpegProcessor";
@@ -19,6 +19,11 @@ beforeAll(async () => {
     "lavfi",
     "-i",
     "testsrc=duration=2:size=320x240:rate=30",
+    "-f",
+    "lavfi",
+    "-i",
+    "sine=frequency=440:duration=2",
+    "-shortest",
     "-y",
     testVideoPath,
   ]);
@@ -92,5 +97,51 @@ describe("FFmpegProcessor.getStatus", () => {
       if (original === undefined) delete process.env.FFMPEG_PATH;
       else process.env.FFMPEG_PATH = original;
     }
+  });
+});
+
+describe("FFmpegProcessor.extractAudio", () => {
+  it("produces a real, non-empty 16kHz mono WAV file", async () => {
+    const outputPath = path.join(workDir, "audio.wav");
+    const processor = new FFmpegProcessor();
+
+    await processor.extractAudio(testVideoPath, outputPath);
+
+    const stats = await stat(outputPath);
+    expect(stats.size).toBeGreaterThan(0);
+
+    const header = await readFile(outputPath);
+    expect(header.toString("ascii", 0, 4)).toBe("RIFF");
+    expect(header.toString("ascii", 8, 12)).toBe("WAVE");
+  });
+});
+
+describe("FFmpegProcessor.detectSceneChanges", () => {
+  it("returns an array of timestamps for a real video (possibly empty for a static test pattern)", async () => {
+    const processor = new FFmpegProcessor();
+    const changes = await processor.detectSceneChanges(testVideoPath);
+
+    expect(Array.isArray(changes)).toBe(true);
+    for (const timestamp of changes) {
+      expect(typeof timestamp).toBe("number");
+      expect(timestamp).toBeGreaterThanOrEqual(0);
+    }
+  });
+
+  it("detects a real scene change in a video that actually cuts between two different patterns", async () => {
+    const cutVideoPath = path.join(workDir, "cut.mp4");
+    await execFileAsync("ffmpeg", [
+      "-f", "lavfi", "-i", "testsrc=duration=2:size=320x240:rate=30",
+      "-f", "lavfi", "-i", "color=c=red:duration=2:size=320x240:rate=30",
+      "-filter_complex", "[0:v][1:v]concat=n=2:v=1:a=0",
+      "-y", cutVideoPath,
+    ]);
+
+    const processor = new FFmpegProcessor();
+    const changes = await processor.detectSceneChanges(cutVideoPath, 0.3);
+
+    expect(changes.length).toBeGreaterThan(0);
+    expect(changes[0]).toBeGreaterThan(1);
+    expect(changes[0]).toBeLessThan(3);
   });
 });

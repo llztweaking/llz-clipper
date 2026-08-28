@@ -86,6 +86,44 @@ export class FFmpegProcessor implements VideoProcessor {
     ]);
   }
 
+  async extractAudio(filePath: string, outputPath: string): Promise<void> {
+    const ffmpegBin = resolveBinary("ffmpeg");
+    await runCommand(ffmpegBin, [
+      "-y",
+      "-i",
+      filePath,
+      "-vn",
+      "-ar",
+      "16000",
+      "-ac",
+      "1",
+      "-sample_fmt",
+      "s16",
+      outputPath,
+    ]);
+  }
+
+  async detectSceneChanges(filePath: string, threshold = 0.4): Promise<number[]> {
+    const ffmpegBin = resolveBinary("ffmpeg");
+    const { stderr } = await runCommand(ffmpegBin, [
+      "-i",
+      filePath,
+      "-filter:v",
+      `select='gt(scene,${threshold})',showinfo`,
+      "-f",
+      "null",
+      "-",
+    ]);
+
+    const timestamps: number[] = [];
+    const regex = /pts_time:([\d.]+)/g;
+    let match: RegExpExecArray | null;
+    while ((match = regex.exec(stderr)) !== null) {
+      timestamps.push(parseFloat(match[1]));
+    }
+    return timestamps;
+  }
+
   async getStatus(): Promise<FfmpegStatus> {
     try {
       const ffmpegBin = resolveBinary("ffmpeg");

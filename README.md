@@ -3,10 +3,12 @@
 Aplicativo Windows para transformar VODs de streamers em clips verticais
 editados automaticamente. Este repositório contém a **Fase 1 (Fundação)**:
 monorepo, banco de dados, autenticação, licenciamento por key e
-administração; e a **Fase 2 (Desktop Shell)**: o app Tauri + React com
-login/ativação, sidebar, Streamers, Configurações e Admin. O pipeline de
-IA/FFmpeg (upload de VOD, edição, render) é fase posterior — ver
-`docs/superpowers/specs/`.
+administração; a **Fase 2 (Desktop Shell)**: o app Tauri + React com
+login/ativação, sidebar, Streamers, Configurações e Admin; e a **Fase 3
+(Pipeline de VOD)**: seleção de VOD local, cópia para storage e extração
+real de metadados/thumbnail via FFmpeg, através de um Job e worker reais.
+A IA de edição (transcrição, detecção de momentos, render de clipes) é
+fase posterior — ver `docs/superpowers/specs/`.
 
 ## Requisitos
 
@@ -96,7 +98,7 @@ A resposta traz o `code` (`LLZ-XXXX-XXXX-XXXX`) a ser usado em
 ```
 apps/desktop/        # App Tauri + React (login, streamers, configurações, admin)
 services/api/         # API Fastify (auth, licenciamento, admin, streamers)
-services/worker/       # Fase 3 — placeholder
+services/worker/       # Worker real: copia VOD, extrai metadados via FFmpeg
 packages/database/    # Schema Prisma, migrations, client compartilhado
 packages/shared/      # Geração de key code, hashing de tokens
 packages/types/       # DTOs compartilhados da API
@@ -121,6 +123,25 @@ Para gerar o instalador Windows (`LLZ-CLIPPER-Setup.exe`):
 npm run tauri build -w @llz-clipper/desktop
 ```
 
+## Rodando o pipeline de VOD (Fase 3)
+
+Com a API rodando, inicie também o worker (processo separado, responsável
+por copiar o VOD para o storage local e extrair metadados via FFmpeg):
+
+```bash
+npm run dev -w @llz-clipper/worker
+```
+
+O worker faz polling na tabela `Job` a cada poucos segundos. Se ele for
+reiniciado com um job "preso" no meio do processamento, esse job é marcado
+como `FAILED` automaticamente — use o botão "Tentar novamente" na tela de
+VOD para reprocessar.
+
+Os arquivos ficam em `storage/vods/` (VODs copiados) e
+`storage/thumbnails/` (thumbnails geradas), relativos ao diretório de onde
+a API/worker são executados (configurável via a variável de ambiente
+`STORAGE_ROOT`).
+
 ## Notas técnicas relevantes
 
 - **Prisma está pinado em v6.19.3** (não a versão mais recente instalável).
@@ -138,10 +159,16 @@ npm run tauri build -w @llz-clipper/desktop
 
 **Fase 2 (Desktop Shell)** está implementada: login/ativação, sidebar,
 Streamers, Configurações (aba Conta) e Admin, todos funcionais contra a
-API real. `/vod`, `/clips`, `/editor` são placeholders "em breve" — seu
-backend ainda não existe (Fases 3-5).
+API real. `/clips`, `/editor` são placeholders "em breve" — seu backend
+ainda não existe (Fases 4-5).
 
-- Upload de VOD, sistema de jobs, FFmpeg — Fase 3
+**Fase 3 (Pipeline de VOD)** está implementada: seleção de VOD local,
+cópia para storage, extração real de metadados e thumbnail via FFmpeg,
+tudo através de um Job e worker reais. Transcrição, análise de
+áudio/vídeo, detecção de momentos, edit plan e render de clipes continuam
+sendo Fases 4-5 — os valores correspondentes de `JobStatus` existem no
+schema mas não têm lógica ainda.
+
 - Transcrição, análise de áudio/vídeo, detecção de contexto, scoring — Fase 4
 - Editor, preview, render, export — Fase 5
 - Device-lock / limite de dispositivos por key, renovação de key — schema

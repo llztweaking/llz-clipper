@@ -1,9 +1,11 @@
 import Fastify, { FastifyInstance } from "fastify";
 import cors from "@fastify/cors";
 import rateLimit from "@fastify/rate-limit";
+import { LocalStorageService } from "@llz-clipper/storage";
 import { registerAuthRoutes } from "./routes/auth.routes";
 import { registerAdminRoutes } from "./routes/admin.routes";
 import { registerStreamerRoutes } from "./routes/streamers.routes";
+import { registerVodRoutes } from "./routes/vods.routes";
 import { authenticate } from "./middleware/authenticate";
 import { requireAdmin } from "./middleware/requireAdmin";
 
@@ -15,6 +17,7 @@ import { requireAdmin } from "./middleware/requireAdmin";
 // both `tauri dev` and the packaged build without maintaining an allowlist.
 export function buildApp(): FastifyInstance {
   const app = Fastify({ logger: false });
+  const storageService = new LocalStorageService();
 
   app.register(cors, {
     origin: true,
@@ -48,6 +51,14 @@ export function buildApp(): FastifyInstance {
       registerStreamerRoutes(streamerScope);
     },
     { prefix: "/streamers" }
+  );
+
+  app.register(
+    async (vodScope) => {
+      vodScope.addHook("preHandler", authenticate);
+      registerVodRoutes(vodScope, storageService);
+    },
+    { prefix: "/vods" }
   );
 
   return app;

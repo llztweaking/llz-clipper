@@ -12,7 +12,13 @@ edition = "2021"
 # to make the lib name unique and wouldn't conflict with the bin name.
 # This seems to be only an issue on Windows, see https://github.com/rust-lang/cargo/issues/8519
 name = "appsdesktop_lib"
-crate-type = ["staticlib", "cdylib", "rlib"]
+# "cdylib" is only needed for mobile (Android/iOS) targets, which this
+# Windows-only desktop app never builds for. Keeping it in unconditionally
+# (the default Tauri v2 template) makes the Windows-GNU linker try to
+# export the entire dependency tree's public symbol surface as a DLL,
+# which overflows ld's export-ordinal table on this toolchain
+# ("error: export ordinal too large") — dropping it fixes the link.
+crate-type = ["staticlib", "rlib"]
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }

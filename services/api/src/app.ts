@@ -7,6 +7,7 @@ import { registerAuthRoutes } from "./routes/auth.routes";
 import { registerAdminRoutes } from "./routes/admin.routes";
 import { registerStreamerRoutes } from "./routes/streamers.routes";
 import { registerVodRoutes } from "./routes/vods.routes";
+import { registerClipRoutes } from "./routes/clips.routes";
 import { registerJobRoutes } from "./routes/jobs.routes";
 import { registerSystemRoutes } from "./routes/system.routes";
 import { authenticate } from "./middleware/authenticate";
@@ -25,7 +26,7 @@ export function buildApp(): FastifyInstance {
 
   app.register(cors, {
     origin: true,
-    methods: ["GET", "POST", "PUT", "DELETE"],
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
     allowedHeaders: ["Content-Type", "Authorization"],
   });
 
@@ -63,6 +64,14 @@ export function buildApp(): FastifyInstance {
       registerVodRoutes(vodScope, storageService);
     },
     { prefix: "/vods" }
+  );
+
+  app.register(
+    async (clipScope) => {
+      clipScope.addHook("preHandler", authenticate);
+      registerClipRoutes(clipScope);
+    },
+    { prefix: "/" }
   );
 
   app.register(

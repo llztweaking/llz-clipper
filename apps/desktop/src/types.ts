@@ -74,3 +74,47 @@ export interface PaginatedResult<T> {
   page: number;
   pageSize: number;
 }
+
+export type JobStatus =
+  | "QUEUED"
+  | "UPLOADING"
+  | "PROCESSING_AUDIO"
+  | "TRANSCRIBING"
+  | "ANALYZING_VIDEO"
+  | "ANALYZING_CONTEXT"
+  | "DETECTING_CLIPS"
+  | "GENERATING_EDIT_PLANS"
+  | "RENDERING"
+  | "COMPLETED"
+  | "FAILED";
+
+export interface Job {
+  status: JobStatus;
+  progress: number;
+  currentStep: string | null;
+  error: string | null;
+}
+
+export interface Vod {
+  id: string;
+  filename: string;
+  sourcePath: string;
+  storagePath: string | null;
+  durationSec: number | null;
+  width: number | null;
+  height: number | null;
+  fps: number | null;
+  sizeBytes: string | null;
+  codec: string | null;
+  streamerId: string;
+  streamer?: { id: string; name: string; username: string };
+  presetId: string | null;
+  createdAt: string;
+  jobs?: Job[];
+}
+
+export interface FfmpegStatus {
+  available: boolean;
+  version: string | null;
+  path: string | null;
+}

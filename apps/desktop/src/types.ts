@@ -118,3 +118,27 @@ export interface FfmpegStatus {
   version: string | null;
   path: string | null;
 }
+
+export type ClipCategory =
+  | "PLAY"
+  | "FUNNY"
+  | "REACTION"
+  | "FAIL"
+  | "CLUTCH"
+  | "SPOKEN_MOMENT"
+  | "IMPORTANT_MOMENT";
+
+export type ClipStatus = "DETECTED" | "READY" | "APPROVED" | "REJECTED" | "RENDERING" | "COMPLETED" | "FAILED";
+
+export interface Clip {
+  id: string;
+  vodId: string;
+  startTime: number;
+  endTime: number;
+  title: string | null;
+  category: ClipCategory | null;
+  score: number | null;
+  scoreReason: string | null;
+  status: ClipStatus;
+  createdAt: string;
+}

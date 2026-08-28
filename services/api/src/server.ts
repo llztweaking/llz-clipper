@@ -1,4 +1,12 @@
-import "dotenv/config";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { config } from "dotenv";
+
+// `npm run dev -w @llz-clipper/api` runs this script with cwd set to
+// services/api, not the repo root, so the default cwd-relative `.env`
+// lookup silently misses the root `.env` — resolve it explicitly instead.
+config({ path: path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../../.env") });
+
 import { buildApp } from "./app";
 
 const port = Number(process.env.PORT ?? 3000);

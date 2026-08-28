@@ -1169,6 +1169,12 @@ import { registerVodRoutes } from "./routes/vods.routes";
 import { authenticate } from "./middleware/authenticate";
 import { requireAdmin } from "./middleware/requireAdmin";
 
+// The only client is the LLZ CLIPPER desktop app's own Tauri webview — it is
+// never loaded as a public web page, so there is no browser-based CSRF
+// surface to defend against here. We reflect the request's Origin (the
+// desktop app's dev server and its bundled `tauri.localhost` origin, plus
+// localhost for tooling/tests) so the webview can talk to the local API in
+// both `tauri dev` and the packaged build without maintaining an allowlist.
 export function buildApp(): FastifyInstance {
   const app = Fastify({ logger: false });
   const storageService = new LocalStorageService();
@@ -2757,23 +2763,97 @@ git commit -m "feat(desktop): implement the VOD screen (file picker, creation fo
 - Consumes: `authedRequest` (Fase 2), `FfmpegStatus` type (Task 8).
 - Produces: the real Processamento tab content (was "Em breve.").
 
-- [ ] **Step 1: Write the failing test**
+**Before you start:** the actual current `SettingsPage.tsx` (post-Fase-2-fix-wave) already has a top-level `loading` state that fetches `/auth/me` unconditionally on mount (not lazily per-tab), and the account tab already renders `loading ? <p>Carregando…</p> : me ? (...) : <p>Não foi possível carregar os dados da conta.</p>`. The steps below add the FFmpeg status fetch as a SECOND unconditional fetch in that same mount-time `useEffect` (for consistency with the existing pattern — not a new lazy-per-tab-click pattern), and restructure the render into a three-way `tab === "account" ? ... : tab === "processing" ? ... : ...` chain. Read the actual current file before editing — the exact current line numbers may differ slightly from what's shown here if anything upstream changed, but the shape described is accurate as of this plan's writing.
 
-Add this to `apps/desktop/src/pages/SettingsPage.test.tsx`, inside the existing `describe("SettingsPage", ...)` block or as a new sibling `describe` — append at the end of the file:
+Similarly, the actual current `SettingsPage.test.tsx`'s shared `beforeEach` uses a blanket `vi.mocked(authedRequest).mockResolvedValue({...the /auth/me shape...})` that does not branch by path — once the component fetches two different endpoints, that blanket mock must become a path-branching `mockImplementation` so the 4 existing tests keep getting the `/auth/me` shape specifically (and don't accidentally receive it for the `/system/ffmpeg-status` call too).
+
+- [ ] **Step 1: Write the failing tests**
+
+Replace `apps/desktop/src/pages/SettingsPage.test.tsx`'s `beforeEach` block (the one currently calling `vi.mocked(authedRequest).mockResolvedValue(...)` with the `/auth/me` shape) with a path-branching version, and append the two new tests at the end of the file. The full corrected test file:
 ```tsx
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { SettingsPage } from "./SettingsPage";
+import { authedRequest } from "../services/authedRequest";
+
+vi.mock("../services/authedRequest", () => ({ authedRequest: vi.fn() }));
+
+const logoutMock = vi.fn();
+vi.mock("../hooks/useAuth", () => ({
+  useAuth: () => ({ logout: logoutMock }),
+}));
+
+const meResponse = {
+  user: { id: "1", email: "user@example.com", role: "USER" },
+  license: {
+    plan: "MONTHLY",
+    status: "ACTIVE",
+    activatedAt: "2026-01-01T00:00:00.000Z",
+    expiresAt: "2026-01-31T00:00:00.000Z",
+    hwid: "hwid-abc",
+  },
+};
+
+const defaultFfmpegStatus = { available: false, version: null, path: null };
+
+beforeEach(() => {
+  logoutMock.mockReset();
+  vi.mocked(authedRequest).mockImplementation((path: string) => {
+    if (path === "/auth/me") return Promise.resolve(meResponse);
+    if (path === "/system/ffmpeg-status") return Promise.resolve(defaultFfmpegStatus);
+    return Promise.reject(new Error(`unexpected path ${path}`));
+  });
+});
+
+describe("SettingsPage", () => {
+  it("shows the account email, plan, and license status", async () => {
+    render(<SettingsPage />);
+    expect(await screen.findByText(/user@example\.com/)).toBeInTheDocument();
+    expect(screen.getByText(/MONTHLY/)).toBeInTheDocument();
+    expect(screen.getByText(/ACTIVE/)).toBeInTheDocument();
+  });
+
+  it("calls logout when the Sair button is clicked", async () => {
+    const user = userEvent.setup();
+    render(<SettingsPage />);
+    await screen.findByText(/user@example\.com/);
+
+    await user.click(screen.getByRole("button", { name: "Sair" }));
+
+    expect(logoutMock).toHaveBeenCalled();
+  });
+
+  it("shows a placeholder for the other tabs", async () => {
+    const user = userEvent.setup();
+    render(<SettingsPage />);
+    await screen.findByText(/user@example\.com/);
+
+    await user.click(screen.getByRole("button", { name: "Geral" }));
+
+    expect(screen.getByText("Em breve.")).toBeInTheDocument();
+  });
+
+  it("stops showing the loading state and shows a fallback when /auth/me fails", async () => {
+    vi.mocked(authedRequest).mockImplementation((path: string) => {
+      if (path === "/auth/me") return Promise.reject(new Error("network down"));
+      if (path === "/system/ffmpeg-status") return Promise.resolve(defaultFfmpegStatus);
+      return Promise.reject(new Error(`unexpected path ${path}`));
+    });
+    render(<SettingsPage />);
+
+    expect(
+      await screen.findByText("Não foi possível carregar os dados da conta.")
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Carregando…")).not.toBeInTheDocument();
+  });
+});
 
 describe("SettingsPage — Processamento tab", () => {
   it("shows FFmpeg's real status when available", async () => {
     vi.mocked(authedRequest).mockImplementation((path: string) => {
-      if (path === "/auth/me") {
-        return Promise.resolve({
-          user: { id: "1", email: "user@example.com", role: "USER" },
-          license: { plan: "MONTHLY", status: "ACTIVE", activatedAt: "2026-01-01T00:00:00.000Z", expiresAt: "2026-01-31T00:00:00.000Z", hwid: "hwid-abc" },
-        });
-      }
-      if (path === "/system/ffmpeg-status") {
-        return Promise.resolve({ available: true, version: "9.0.1", path: "ffmpeg" });
-      }
+      if (path === "/auth/me") return Promise.resolve(meResponse);
+      if (path === "/system/ffmpeg-status") return Promise.resolve({ available: true, version: "9.0.1", path: "ffmpeg" });
       return Promise.reject(new Error(`unexpected path ${path}`));
     });
 
@@ -2788,19 +2868,8 @@ describe("SettingsPage — Processamento tab", () => {
   });
 
   it("shows a clear message when FFmpeg is unavailable", async () => {
-    vi.mocked(authedRequest).mockImplementation((path: string) => {
-      if (path === "/auth/me") {
-        return Promise.resolve({
-          user: { id: "1", email: "user@example.com", role: "USER" },
-          license: { plan: "MONTHLY", status: "ACTIVE", activatedAt: "2026-01-01T00:00:00.000Z", expiresAt: "2026-01-31T00:00:00.000Z", hwid: "hwid-abc" },
-        });
-      }
-      if (path === "/system/ffmpeg-status") {
-        return Promise.resolve({ available: false, version: null, path: null });
-      }
-      return Promise.reject(new Error(`unexpected path ${path}`));
-    });
-
+    // The default beforeEach mock already returns { available: false, ... } for
+    // /system/ffmpeg-status, so no extra mock setup is needed for this case.
     const user = userEvent.setup();
     render(<SettingsPage />);
     await screen.findByText(/user@example\.com/);
@@ -2812,39 +2881,73 @@ describe("SettingsPage — Processamento tab", () => {
 });
 ```
 
-This test file already imports `authedRequest` (mocked) and `userEvent`/`screen`/`render` from Fase 2 — verify those imports are present at the top of the file; if the existing mock is `vi.mock("../services/authedRequest", () => ({ authedRequest: vi.fn() }))`, this new usage of `vi.mocked(authedRequest).mockImplementation(...)` is consistent with that setup and does not require changing the existing tests above it in the file (which continue to use `mockResolvedValue` for the single-path case).
-
 - [ ] **Step 2: Run to verify it fails**
 
 Run: `cd "C:\Users\Administrador\Downloads\LLZ-CLIPPER" && npm test -w @llz-clipper/desktop`
-Expected: FAIL — the "Processamento" tab currently renders "Em breve." regardless of FFmpeg status.
+Expected: FAIL — the "Processamento" tab currently renders "Em breve." regardless of FFmpeg status, and `authedRequest` is never called with `/system/ffmpeg-status` at all yet.
 
 - [ ] **Step 3: Implement the real Processamento tab**
 
-In `apps/desktop/src/pages/SettingsPage.tsx`, add the import:
+Read the actual current `apps/desktop/src/pages/SettingsPage.tsx` first. Replace it with this full file (this preserves the existing account-tab behavior exactly — `loading`, `me`, the fallback message, `logout` — and adds the FFmpeg status fetch and the Processamento tab's real content):
 ```tsx
-import type { FfmpegStatus } from "../types";
-```
+import { useEffect, useState } from "react";
+import { authedRequest } from "../services/authedRequest";
+import { useAuth } from "../hooks/useAuth";
+import type { AuthUser, LicenseSummary, FfmpegStatus } from "../types";
 
-Add state and an effect that fetches the status only when the tab is active:
-```tsx
+type Tab = "account" | "general" | "processing" | "ai";
+
+interface MeResponse {
+  user: AuthUser;
+  license: LicenseSummary | null;
+}
+
+export function SettingsPage() {
+  const { logout } = useAuth();
+  const [tab, setTab] = useState<Tab>("account");
+  const [me, setMe] = useState<MeResponse | null>(null);
+  const [loading, setLoading] = useState(true);
   const [ffmpegStatus, setFfmpegStatus] = useState<FfmpegStatus | null>(null);
-  const [processingLoading, setProcessingLoading] = useState(false);
+  const [processingLoading, setProcessingLoading] = useState(true);
 
   useEffect(() => {
-    if (tab !== "processing") return;
+    setLoading(true);
+    authedRequest<MeResponse>("/auth/me")
+      .then(setMe)
+      .catch(() => {
+        // OfflineBanner / session-expired modal already surface the
+        // underlying problem globally; this just needs to stop spinning.
+      })
+      .finally(() => setLoading(false));
+
     setProcessingLoading(true);
     authedRequest<FfmpegStatus>("/system/ffmpeg-status")
       .then(setFfmpegStatus)
       .catch(() => setFfmpegStatus(null))
       .finally(() => setProcessingLoading(false));
-  }, [tab]);
-```
+  }, []);
 
-Replace the current catch-all `{tab !== "account" && <p>Em breve.</p>}` rendering with per-tab branches. The final render section of the component should look like:
-```tsx
+  return (
+    <div className="settings-page">
+      <h1>Configurações</h1>
+      <div className="settings-tabs">
+        <button className={tab === "account" ? "active" : ""} onClick={() => setTab("account")}>
+          Conta
+        </button>
+        <button className={tab === "general" ? "active" : ""} onClick={() => setTab("general")}>
+          Geral
+        </button>
+        <button className={tab === "processing" ? "active" : ""} onClick={() => setTab("processing")}>
+          Processamento
+        </button>
+        <button className={tab === "ai" ? "active" : ""} onClick={() => setTab("ai")}>
+          IA
+        </button>
+      </div>
       {tab === "account" ? (
-        me ? (
+        loading ? (
+          <p>Carregando…</p>
+        ) : me ? (
           <div className="settings-panel">
             <p>Email: {me.user.email}</p>
             <p>Plano: {me.license?.plan ?? "—"}</p>
@@ -2873,9 +2976,10 @@ Replace the current catch-all `{tab !== "account" && <p>Em breve.</p>}` renderin
       ) : (
         <p>Em breve.</p>
       )}
+    </div>
+  );
+}
 ```
-
-(This assumes the existing `account` tab branch already has the `me ? (...) : <p>Não foi possível...</p>` shape from the Fase 2 final review's fix — keep that branch's existing content exactly as it is, only restructure the surrounding `tab === "account" ? ... : tab === "processing" ? ... : ...` conditional chain around it.)
 
 - [ ] **Step 4: Run to verify it passes**
 

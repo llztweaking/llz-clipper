@@ -1692,7 +1692,7 @@ import { prisma, Prisma } from "@llz-clipper/database";
 import { LocalStorageService, type StorageService } from "@llz-clipper/storage";
 import { FFmpegProcessor, type VideoProcessor } from "@llz-clipper/ffmpeg";
 import { WhisperCppProcessor, type TranscriptionService } from "@llz-clipper/transcription";
-import { computeEnergyProfile } from "./stages/processAudio";
+import { processAudioStage } from "./stages/processAudio";
 import { transcribeStage } from "./stages/transcribe";
 import { analyzeVideoStage } from "./stages/analyzeVideo";
 import { analyzeContextStage } from "./stages/analyzeContext";
@@ -1772,8 +1772,7 @@ export async function processNextJob(
     const wavPath = path.join(workDir, `${vod.id}.wav`);
 
     try {
-      await videoProcessor.extractAudio(storedPath, wavPath);
-      const energyProfile = await computeEnergyProfile(wavPath);
+      const { energyProfile } = await processAudioStage(storedPath, videoProcessor, wavPath);
 
       await prisma.job.update({
         where: { id: job.id },

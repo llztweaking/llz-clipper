@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { authedRequest } from "../services/authedRequest";
 import { useAuth } from "../hooks/useAuth";
-import type { AuthUser, LicenseSummary } from "../types";
+import type { AuthUser, LicenseSummary, FfmpegStatus } from "../types";
 
 type Tab = "account" | "general" | "processing" | "ai";
 
@@ -15,6 +15,8 @@ export function SettingsPage() {
   const [tab, setTab] = useState<Tab>("account");
   const [me, setMe] = useState<MeResponse | null>(null);
   const [loading, setLoading] = useState(true);
+  const [ffmpegStatus, setFfmpegStatus] = useState<FfmpegStatus | null>(null);
+  const [processingLoading, setProcessingLoading] = useState(true);
 
   useEffect(() => {
     setLoading(true);
@@ -25,6 +27,12 @@ export function SettingsPage() {
         // underlying problem globally; this just needs to stop spinning.
       })
       .finally(() => setLoading(false));
+
+    setProcessingLoading(true);
+    authedRequest<FfmpegStatus>("/system/ffmpeg-status")
+      .then(setFfmpegStatus)
+      .catch(() => setFfmpegStatus(null))
+      .finally(() => setProcessingLoading(false));
   }, []);
 
   return (
@@ -61,6 +69,17 @@ export function SettingsPage() {
           </div>
         ) : (
           <p>Não foi possível carregar os dados da conta.</p>
+        )
+      ) : tab === "processing" ? (
+        processingLoading ? (
+          <p>Carregando…</p>
+        ) : ffmpegStatus?.available ? (
+          <p>FFmpeg encontrado — versão {ffmpegStatus.version}</p>
+        ) : (
+          <p>
+            FFmpeg não encontrado. Configure a variável de ambiente FFMPEG_PATH apontando para o executável e
+            reinicie a API.
+          </p>
         )
       ) : (
         <p>Em breve.</p>

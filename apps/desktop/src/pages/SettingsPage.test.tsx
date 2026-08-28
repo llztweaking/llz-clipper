@@ -11,17 +11,25 @@ vi.mock("../hooks/useAuth", () => ({
   useAuth: () => ({ logout: logoutMock }),
 }));
 
+const meResponse = {
+  user: { id: "1", email: "user@example.com", role: "USER" },
+  license: {
+    plan: "MONTHLY",
+    status: "ACTIVE",
+    activatedAt: "2026-01-01T00:00:00.000Z",
+    expiresAt: "2026-01-31T00:00:00.000Z",
+    hwid: "hwid-abc",
+  },
+};
+
+const defaultFfmpegStatus = { available: false, version: null, path: null };
+
 beforeEach(() => {
   logoutMock.mockReset();
-  vi.mocked(authedRequest).mockResolvedValue({
-    user: { id: "1", email: "user@example.com", role: "USER" },
-    license: {
-      plan: "MONTHLY",
-      status: "ACTIVE",
-      activatedAt: "2026-01-01T00:00:00.000Z",
-      expiresAt: "2026-01-31T00:00:00.000Z",
-      hwid: "hwid-abc",
-    },
+  vi.mocked(authedRequest).mockImplementation((path: string) => {
+    if (path === "/auth/me") return Promise.resolve(meResponse);
+    if (path === "/system/ffmpeg-status") return Promise.resolve(defaultFfmpegStatus);
+    return Promise.reject(new Error(`unexpected path ${path}`));
   });
 });
 
@@ -54,12 +62,47 @@ describe("SettingsPage", () => {
   });
 
   it("stops showing the loading state and shows a fallback when /auth/me fails", async () => {
-    vi.mocked(authedRequest).mockRejectedValueOnce(new Error("network down"));
+    vi.mocked(authedRequest).mockImplementation((path: string) => {
+      if (path === "/auth/me") return Promise.reject(new Error("network down"));
+      if (path === "/system/ffmpeg-status") return Promise.resolve(defaultFfmpegStatus);
+      return Promise.reject(new Error(`unexpected path ${path}`));
+    });
     render(<SettingsPage />);
 
     expect(
       await screen.findByText("Não foi possível carregar os dados da conta.")
     ).toBeInTheDocument();
     expect(screen.queryByText("Carregando…")).not.toBeInTheDocument();
+  });
+});
+
+describe("SettingsPage — Processamento tab", () => {
+  it("shows FFmpeg's real status when available", async () => {
+    vi.mocked(authedRequest).mockImplementation((path: string) => {
+      if (path === "/auth/me") return Promise.resolve(meResponse);
+      if (path === "/system/ffmpeg-status") return Promise.resolve({ available: true, version: "9.0.1", path: "ffmpeg" });
+      return Promise.reject(new Error(`unexpected path ${path}`));
+    });
+
+    const user = userEvent.setup();
+    render(<SettingsPage />);
+    await screen.findByText(/user@example\.com/);
+
+    await user.click(screen.getByRole("button", { name: "Processamento" }));
+
+    expect(await screen.findByText(/FFmpeg encontrado/)).toBeInTheDocument();
+    expect(screen.getByText(/9\.0\.1/)).toBeInTheDocument();
+  });
+
+  it("shows a clear message when FFmpeg is unavailable", async () => {
+    // The default beforeEach mock already returns { available: false, ... } for
+    // /system/ffmpeg-status, so no extra mock setup is needed for this case.
+    const user = userEvent.setup();
+    render(<SettingsPage />);
+    await screen.findByText(/user@example\.com/);
+
+    await user.click(screen.getByRole("button", { name: "Processamento" }));
+
+    expect(await screen.findByText(/FFmpeg não encontrado/)).toBeInTheDocument();
   });
 });

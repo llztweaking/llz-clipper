@@ -1,11 +1,10 @@
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 import { config } from "dotenv";
 
 // `npm run dev -w @llz-clipper/worker` runs this script with cwd set to
 // services/worker, not the repo root, so the default cwd-relative `.env`
 // lookup silently misses the root `.env` — resolve it explicitly instead.
-config({ path: path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../../.env") });
+config({ path: path.resolve(__dirname, "../../../.env") });
 
 import { recoverStuckJobs } from "./recovery";
 import { processNextJob } from "./jobProcessor";

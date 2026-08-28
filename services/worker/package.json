@@ -17,6 +17,7 @@
   "dependencies": {
     "@llz-clipper/database": "^0.0.0",
     "@llz-clipper/ffmpeg": "^0.0.0",
-    "@llz-clipper/storage": "^0.0.0"
+    "@llz-clipper/storage": "^0.0.0",
+    "@llz-clipper/transcription": "^0.0.0"
   }
 }

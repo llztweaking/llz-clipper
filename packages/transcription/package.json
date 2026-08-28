@@ -1,0 +1,17 @@
+{
+  "name": "@llz-clipper/transcription",
+  "version": "0.0.0",
+  "private": true,
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "devDependencies": {
+    "@types/node": "^26.4.0",
+    "dotenv": "^17.4.2",
+    "typescript": "^7.0.2",
+    "vitest": "^4.1.11"
+  }
+}

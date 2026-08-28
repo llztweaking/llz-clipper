@@ -10,6 +10,7 @@ import { StreamersPage } from "./pages/StreamersPage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { AdminPage } from "./pages/AdminPage";
 import { ComingSoonPage } from "./pages/ComingSoonPage";
+import { VodPage } from "./pages/VodPage";
 
 function AppShell() {
   const role = useAuthStore((state) => state.user?.role);
@@ -19,7 +20,7 @@ function AppShell() {
       <Sidebar />
       <main className="app-content">
         <Routes>
-          <Route path="/vod" element={<ComingSoonPage title="VOD" />} />
+          <Route path="/vod" element={<VodPage />} />
           <Route path="/clips" element={<ComingSoonPage title="Clips" />} />
           <Route path="/editor" element={<ComingSoonPage title="Editor" />} />
           <Route path="/streamers" element={<StreamersPage />} />

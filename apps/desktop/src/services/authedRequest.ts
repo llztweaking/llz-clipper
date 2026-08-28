@@ -1,4 +1,4 @@
-import { rawRequest, ApiError, type RequestOptions } from "./apiClient";
+import { rawRequest, rawRequestBlob, ApiError, type RequestOptions } from "./apiClient";
 import { useAuthStore } from "../stores/authStore";
 
 const SESSION_ENDING_CODES = new Set([
@@ -14,14 +14,13 @@ function endSessionIfSessionEnding(store: ReturnType<typeof useAuthStore.getStat
   }
 }
 
-export async function authedRequest<T>(
-  path: string,
-  options: Omit<RequestOptions, "token"> = {}
-): Promise<T> {
+// Shared by authedRequest and authedRequestBlob: attaches the current access
+// token, and on a 401 tries a single refresh-then-retry before giving up.
+async function withAuthRetry<T>(exec: (token: string | undefined) => Promise<T>): Promise<T> {
   const store = useAuthStore.getState();
 
   try {
-    return await rawRequest<T>(path, { ...options, token: store.accessToken ?? undefined });
+    return await exec(store.accessToken ?? undefined);
   } catch (err) {
     if (err instanceof ApiError && err.status === 401 && store.refreshToken) {
       let refreshedToken: string;
@@ -47,7 +46,7 @@ export async function authedRequest<T>(
       // path below, so the session only ends here if the retry itself comes
       // back with a session-ending code.
       try {
-        return await rawRequest<T>(path, { ...options, token: refreshedToken });
+        return await exec(refreshedToken);
       } catch (retryErr) {
         endSessionIfSessionEnding(store, retryErr);
         throw retryErr;
@@ -57,4 +56,19 @@ export async function authedRequest<T>(
     endSessionIfSessionEnding(store, err);
     throw err;
   }
+}
+
+export async function authedRequest<T>(
+  path: string,
+  options: Omit<RequestOptions, "token"> = {}
+): Promise<T> {
+  return withAuthRetry((token) => rawRequest<T>(path, { ...options, token }));
+}
+
+/**
+ * Like `authedRequest`, but for binary responses (e.g. thumbnails): resolves
+ * to a `Blob` instead of parsing the response as JSON.
+ */
+export async function authedRequestBlob(path: string): Promise<Blob> {
+  return withAuthRetry((token) => rawRequestBlob(path, { token }));
 }

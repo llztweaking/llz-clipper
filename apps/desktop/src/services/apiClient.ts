@@ -48,3 +48,31 @@ export async function rawRequest<T>(path: string, options: RequestOptions = {}):
 
   return data as T;
 }
+
+/**
+ * Like `rawRequest`, but for binary responses (e.g. thumbnails): it returns
+ * the response body as a `Blob` instead of parsing it as JSON.
+ */
+export async function rawRequestBlob(path: string, options: RequestOptions = {}): Promise<Blob> {
+  let response: Response;
+
+  try {
+    response = await fetch(`${API_BASE_URL}${path}`, {
+      method: options.method ?? "GET",
+      headers: {
+        ...(options.token ? { Authorization: `Bearer ${options.token}` } : {}),
+      },
+    });
+    useNetworkStore.getState().setOffline(false);
+  } catch {
+    useNetworkStore.getState().setOffline(true);
+    throw new ApiError(0, "network_error", "Servidor indisponível");
+  }
+
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    throw new ApiError(response.status, data.error ?? "unknown_error", data.message ?? "Erro desconhecido");
+  }
+
+  return response.blob();
+}

@@ -1,9 +1,10 @@
 import { describe, it, expect, beforeEach, afterAll } from "vitest";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, rm, writeFile, mkdir } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import type { FastifyInstance } from "fastify";
 import { prisma, resetDatabase } from "@llz-clipper/database";
+import { LocalStorageService } from "@llz-clipper/storage";
 import { buildApp } from "../src/app";
 import { createAuthenticatedUser } from "./helpers";
 
@@ -12,9 +13,10 @@ let tempDir: string;
 
 beforeEach(async () => {
   await resetDatabase();
+  tempDir = await mkdtemp(path.join(tmpdir(), "llz-vod-api-test-"));
+  process.env.STORAGE_ROOT = path.join(tempDir, "storage");
   app = buildApp();
   await app.ready();
-  tempDir = await mkdtemp(path.join(tmpdir(), "llz-vod-api-test-"));
 });
 
 afterAll(async () => {
@@ -291,5 +293,89 @@ describe("POST /vods/:id/retry", () => {
       headers: { authorization: `Bearer ${stranger.token}` },
     });
     expect(response.statusCode).toBe(404);
+  });
+});
+
+describe("GET /vods/:id/thumbnail", () => {
+  it("streams the thumbnail image when it exists on disk", async () => {
+    const { token, user } = await createAuthenticatedUser("USER");
+    const streamer = await createOwnedStreamer(user.id);
+    const filePath = await createFakeFile("video.mp4");
+
+    const created = await app.inject({
+      method: "POST",
+      url: "/vods",
+      headers: { authorization: `Bearer ${token}` },
+      payload: { streamerId: streamer.id, sourcePath: filePath },
+    });
+    const vodId = created.json().vod.id;
+
+    const storageService = new LocalStorageService();
+    const thumbnailPath = storageService.getThumbnailPath(vodId);
+    await mkdir(path.dirname(thumbnailPath), { recursive: true });
+    const thumbnailContent = Buffer.from("fake jpeg bytes");
+    await writeFile(thumbnailPath, thumbnailContent);
+
+    const response = await app.inject({
+      method: "GET",
+      url: `/vods/${vodId}/thumbnail`,
+      headers: { authorization: `Bearer ${token}` },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.headers["content-type"]).toBe("image/jpeg");
+    expect(response.rawPayload.equals(thumbnailContent)).toBe(true);
+  });
+
+  it("returns 404 thumbnail_not_found when the job hasn't generated a thumbnail yet", async () => {
+    const { token, user } = await createAuthenticatedUser("USER");
+    const streamer = await createOwnedStreamer(user.id);
+    const filePath = await createFakeFile("video.mp4");
+
+    const created = await app.inject({
+      method: "POST",
+      url: "/vods",
+      headers: { authorization: `Bearer ${token}` },
+      payload: { streamerId: streamer.id, sourcePath: filePath },
+    });
+    const vodId = created.json().vod.id;
+
+    const response = await app.inject({
+      method: "GET",
+      url: `/vods/${vodId}/thumbnail`,
+      headers: { authorization: `Bearer ${token}` },
+    });
+
+    expect(response.statusCode).toBe(404);
+    expect(response.json().error).toBe("thumbnail_not_found");
+  });
+
+  it("returns 404 for a VOD belonging to another user", async () => {
+    const owner = await createAuthenticatedUser("USER");
+    const stranger = await createAuthenticatedUser("USER");
+    const streamer = await createOwnedStreamer(owner.user.id);
+    const filePath = await createFakeFile("video.mp4");
+
+    const created = await app.inject({
+      method: "POST",
+      url: "/vods",
+      headers: { authorization: `Bearer ${owner.token}` },
+      payload: { streamerId: streamer.id, sourcePath: filePath },
+    });
+    const vodId = created.json().vod.id;
+
+    const storageService = new LocalStorageService();
+    const thumbnailPath = storageService.getThumbnailPath(vodId);
+    await mkdir(path.dirname(thumbnailPath), { recursive: true });
+    await writeFile(thumbnailPath, Buffer.from("fake jpeg bytes"));
+
+    const response = await app.inject({
+      method: "GET",
+      url: `/vods/${vodId}/thumbnail`,
+      headers: { authorization: `Bearer ${stranger.token}` },
+    });
+
+    expect(response.statusCode).toBe(404);
+    expect(response.json().error).toBe("not_found");
   });
 });

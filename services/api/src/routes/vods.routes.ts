@@ -1,5 +1,6 @@
 import { FastifyInstance } from "fastify";
 import { z } from "zod";
+import { createReadStream } from "node:fs";
 import { stat } from "node:fs/promises";
 import path from "node:path";
 import { prisma } from "@llz-clipper/database";
@@ -88,6 +89,23 @@ export function registerVodRoutes(app: FastifyInstance, storageService: StorageS
 
     await deleteVodAndFiles(storageService, id);
     return reply.code(204).send();
+  });
+
+  app.get("/:id/thumbnail", async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const vod = await prisma.vOD.findFirst({
+      where: { id, streamer: { userId: request.authUser!.id } },
+    });
+    if (!vod) return reply.code(404).send({ error: "not_found", message: "VOD não encontrado" });
+
+    const thumbnailPath = storageService.getThumbnailPath(id);
+    try {
+      await stat(thumbnailPath);
+    } catch {
+      return reply.code(404).send({ error: "thumbnail_not_found", message: "Thumbnail não encontrado" });
+    }
+
+    return reply.type("image/jpeg").send(createReadStream(thumbnailPath));
   });
 
   app.post("/:id/retry", async (request, reply) => {

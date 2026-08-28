@@ -1,8 +1,11 @@
-import { describe, it, expect, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { VodCard } from "./VodCard";
+import * as vodsApi from "../services/vodsApi";
 import type { Vod } from "../types";
+
+vi.mock("../services/vodsApi");
 
 const baseVod: Vod = {
   id: "v1",
@@ -19,6 +22,13 @@ const baseVod: Vod = {
   presetId: null,
   createdAt: "2026-01-01T00:00:00.000Z",
 };
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  vi.mocked(vodsApi.getVodThumbnail).mockResolvedValue(new Blob(["fake-jpeg-bytes"], { type: "image/jpeg" }));
+  URL.createObjectURL = vi.fn(() => "blob:mock-thumbnail-url");
+  URL.revokeObjectURL = vi.fn();
+});
 
 describe("VodCard", () => {
   it("shows a progress bar and currentStep while the job is in progress", () => {
@@ -68,5 +78,31 @@ describe("VodCard", () => {
 
     await user.click(screen.getByRole("button", { name: "Confirmar" }));
     expect(onDelete).toHaveBeenCalled();
+  });
+
+  it("renders a thumbnail image for a COMPLETED job once the blob fetch resolves", async () => {
+    const vod: Vod = {
+      ...baseVod,
+      jobs: [{ status: "COMPLETED", progress: 100, currentStep: null, error: null }],
+    };
+    render(<VodCard vod={vod} onDelete={vi.fn()} onRetry={vi.fn()} />);
+
+    await waitFor(() => expect(screen.getByRole("img")).toBeInTheDocument());
+
+    expect(vodsApi.getVodThumbnail).toHaveBeenCalledWith("v1");
+    expect(screen.getByRole("img")).toHaveAttribute("src", "blob:mock-thumbnail-url");
+  });
+
+  it("does not render a broken image and does not crash when the thumbnail fetch 404s", async () => {
+    vi.mocked(vodsApi.getVodThumbnail).mockRejectedValueOnce(new Error("thumbnail_not_found"));
+    const vod: Vod = {
+      ...baseVod,
+      jobs: [{ status: "COMPLETED", progress: 100, currentStep: null, error: null }],
+    };
+    render(<VodCard vod={vod} onDelete={vi.fn()} onRetry={vi.fn()} />);
+
+    await waitFor(() => expect(vodsApi.getVodThumbnail).toHaveBeenCalledWith("v1"));
+
+    expect(screen.queryByRole("img")).not.toBeInTheDocument();
   });
 });

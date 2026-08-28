@@ -1,4 +1,4 @@
-import { authedRequest } from "./authedRequest";
+import { authedRequest, authedRequestBlob } from "./authedRequest";
 import type { Vod } from "../types";
 
 export interface CreateVodInput {
@@ -21,4 +21,8 @@ export function deleteVod(id: string): Promise<void> {
 
 export function retryVod(id: string): Promise<{ jobId: string }> {
   return authedRequest(`/vods/${id}/retry`, { method: "POST" });
+}
+
+export function getVodThumbnail(id: string): Promise<Blob> {
+  return authedRequestBlob(`/vods/${id}/thumbnail`);
 }

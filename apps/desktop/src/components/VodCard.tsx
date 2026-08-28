@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { Vod } from "../types";
+import { getVodThumbnail } from "../services/vodsApi";
 
 interface VodCardProps {
   vod: Vod;
@@ -23,13 +24,47 @@ function formatSize(sizeBytes: string | null): string {
 
 export function VodCard({ vod, onDelete, onRetry }: VodCardProps) {
   const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null);
   const job = vod.jobs?.[0];
   const isActive = job && job.status !== "COMPLETED" && job.status !== "FAILED";
+  const isCompleted = job?.status === "COMPLETED";
+
+  // Thumbnails only exist once processing succeeded. The API requires the
+  // same Bearer-token auth as every other request, which a plain <img src>
+  // can't send, so we fetch it as a Blob through the authenticated client and
+  // turn it into an object URL. If the fetch fails (e.g. no thumbnail was
+  // generated) we simply don't show an image, instead of a broken icon.
+  useEffect(() => {
+    if (!isCompleted) {
+      setThumbnailUrl(null);
+      return;
+    }
+
+    let cancelled = false;
+    let objectUrl: string | null = null;
+
+    getVodThumbnail(vod.id)
+      .then((blob) => {
+        if (cancelled) return;
+        objectUrl = URL.createObjectURL(blob);
+        setThumbnailUrl(objectUrl);
+      })
+      .catch(() => {
+        if (!cancelled) setThumbnailUrl(null);
+      });
+
+    return () => {
+      cancelled = true;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [vod.id, isCompleted]);
 
   return (
     <div className="vod-card">
       <h3>{vod.filename}</h3>
       {vod.streamer && <p>{vod.streamer.name}</p>}
+
+      {thumbnailUrl && <img src={thumbnailUrl} alt={`Thumbnail de ${vod.filename}`} className="vod-thumbnail" />}
 
       {isActive && (
         <div className="vod-progress">

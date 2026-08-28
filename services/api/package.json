@@ -20,6 +20,7 @@
     "@fastify/cors": "^11.3.0",
     "@fastify/rate-limit": "^11.2.0",
     "@llz-clipper/database": "^0.0.0",
+    "@llz-clipper/ffmpeg": "^0.0.0",
     "@llz-clipper/shared": "^0.0.0",
     "@llz-clipper/storage": "^0.0.0",
     "@llz-clipper/types": "^0.0.0",

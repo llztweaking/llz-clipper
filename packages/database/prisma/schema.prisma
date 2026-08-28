@@ -133,7 +133,8 @@ model Streamer {
 model VOD {
   id          String    @id @default(uuid())
   filename    String
-  storagePath String
+  sourcePath  String
+  storagePath String?
   durationSec Int?
   width       Int?
   height      Int?

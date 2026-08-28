@@ -2,10 +2,13 @@ import Fastify, { FastifyInstance } from "fastify";
 import cors from "@fastify/cors";
 import rateLimit from "@fastify/rate-limit";
 import { LocalStorageService } from "@llz-clipper/storage";
+import { FFmpegProcessor } from "@llz-clipper/ffmpeg";
 import { registerAuthRoutes } from "./routes/auth.routes";
 import { registerAdminRoutes } from "./routes/admin.routes";
 import { registerStreamerRoutes } from "./routes/streamers.routes";
 import { registerVodRoutes } from "./routes/vods.routes";
+import { registerJobRoutes } from "./routes/jobs.routes";
+import { registerSystemRoutes } from "./routes/system.routes";
 import { authenticate } from "./middleware/authenticate";
 import { requireAdmin } from "./middleware/requireAdmin";
 
@@ -18,6 +21,7 @@ import { requireAdmin } from "./middleware/requireAdmin";
 export function buildApp(): FastifyInstance {
   const app = Fastify({ logger: false });
   const storageService = new LocalStorageService();
+  const videoProcessor = new FFmpegProcessor();
 
   app.register(cors, {
     origin: true,
@@ -59,6 +63,22 @@ export function buildApp(): FastifyInstance {
       registerVodRoutes(vodScope, storageService);
     },
     { prefix: "/vods" }
+  );
+
+  app.register(
+    async (jobScope) => {
+      jobScope.addHook("preHandler", authenticate);
+      registerJobRoutes(jobScope);
+    },
+    { prefix: "/jobs" }
+  );
+
+  app.register(
+    async (systemScope) => {
+      systemScope.addHook("preHandler", authenticate);
+      registerSystemRoutes(systemScope, videoProcessor);
+    },
+    { prefix: "/system" }
   );
 
   return app;

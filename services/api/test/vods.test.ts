@@ -379,3 +379,65 @@ describe("GET /vods/:id/thumbnail", () => {
     expect(response.json().error).toBe("not_found");
   });
 });
+
+describe("GET /vods/:id/video", () => {
+  it("streams the real video file when storagePath is set", async () => {
+    const { token, user } = await createAuthenticatedUser("USER");
+    const streamer = await createOwnedStreamer(user.id);
+    const videoPath = path.join(tempDir, "real-video.mp4");
+    const videoContent = Buffer.from("fake mp4 bytes");
+    await writeFile(videoPath, videoContent);
+
+    const vod = await prisma.vOD.create({
+      data: { filename: "real-video.mp4", sourcePath: videoPath, streamerId: streamer.id, storagePath: videoPath },
+    });
+
+    const response = await app.inject({
+      method: "GET",
+      url: `/vods/${vod.id}/video`,
+      headers: { authorization: `Bearer ${token}` },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.headers["content-type"]).toBe("video/mp4");
+    expect(response.rawPayload.equals(videoContent)).toBe(true);
+  });
+
+  it("returns 404 video_not_found when storagePath is not set yet", async () => {
+    const { token, user } = await createAuthenticatedUser("USER");
+    const streamer = await createOwnedStreamer(user.id);
+    const vod = await prisma.vOD.create({
+      data: { filename: "v.mp4", sourcePath: "/tmp/v.mp4", streamerId: streamer.id },
+    });
+
+    const response = await app.inject({
+      method: "GET",
+      url: `/vods/${vod.id}/video`,
+      headers: { authorization: `Bearer ${token}` },
+    });
+
+    expect(response.statusCode).toBe(404);
+    expect(response.json().error).toBe("video_not_found");
+  });
+
+  it("returns 404 for a VOD belonging to another user", async () => {
+    const owner = await createAuthenticatedUser("USER");
+    const stranger = await createAuthenticatedUser("USER");
+    const streamer = await createOwnedStreamer(owner.user.id);
+    const videoPath = path.join(tempDir, "owner-video.mp4");
+    await writeFile(videoPath, Buffer.from("fake mp4 bytes"));
+
+    const vod = await prisma.vOD.create({
+      data: { filename: "v.mp4", sourcePath: videoPath, streamerId: streamer.id, storagePath: videoPath },
+    });
+
+    const response = await app.inject({
+      method: "GET",
+      url: `/vods/${vod.id}/video`,
+      headers: { authorization: `Bearer ${stranger.token}` },
+    });
+
+    expect(response.statusCode).toBe(404);
+    expect(response.json().error).toBe("not_found");
+  });
+});

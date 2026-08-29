@@ -9,6 +9,13 @@ import { serializeVod, deleteVodAndFiles } from "../services/vodService";
 
 const ALLOWED_EXTENSIONS = [".mp4", ".mkv", ".mov", ".webm"];
 
+const VIDEO_CONTENT_TYPES: Record<string, string> = {
+  ".mp4": "video/mp4",
+  ".webm": "video/webm",
+  ".mkv": "video/x-matroska",
+  ".mov": "video/quicktime",
+};
+
 const createVodSchema = z.object({
   streamerId: z.string().min(1),
   sourcePath: z.string().min(1),
@@ -106,6 +113,29 @@ export function registerVodRoutes(app: FastifyInstance, storageService: StorageS
     }
 
     return reply.type("image/jpeg").send(createReadStream(thumbnailPath));
+  });
+
+  app.get("/:id/video", async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const vod = await prisma.vOD.findFirst({
+      where: { id, streamer: { userId: request.authUser!.id } },
+    });
+    if (!vod) return reply.code(404).send({ error: "not_found", message: "VOD não encontrado" });
+
+    if (!vod.storagePath) {
+      return reply.code(404).send({ error: "video_not_found", message: "Vídeo não encontrado" });
+    }
+
+    try {
+      await stat(vod.storagePath);
+    } catch {
+      return reply.code(404).send({ error: "video_not_found", message: "Vídeo não encontrado" });
+    }
+
+    const extension = path.extname(vod.storagePath).toLowerCase();
+    const contentType = VIDEO_CONTENT_TYPES[extension] ?? "video/mp4";
+
+    return reply.type(contentType).send(createReadStream(vod.storagePath));
   });
 
   app.post("/:id/retry", async (request, reply) => {

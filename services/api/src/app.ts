@@ -8,6 +8,7 @@ import { registerAdminRoutes } from "./routes/admin.routes";
 import { registerStreamerRoutes } from "./routes/streamers.routes";
 import { registerVodRoutes } from "./routes/vods.routes";
 import { registerClipRoutes } from "./routes/clips.routes";
+import { registerEditPlanRoutes } from "./routes/editPlans.routes";
 import { registerJobRoutes } from "./routes/jobs.routes";
 import { registerSystemRoutes } from "./routes/system.routes";
 import { authenticate } from "./middleware/authenticate";
@@ -70,6 +71,7 @@ export function buildApp(): FastifyInstance {
     async (clipScope) => {
       clipScope.addHook("preHandler", authenticate);
       registerClipRoutes(clipScope);
+      registerEditPlanRoutes(clipScope);
     },
     { prefix: "/" }
   );

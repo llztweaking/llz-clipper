@@ -75,4 +75,19 @@ describe("analyzeContextStage", () => {
 
     expect(windows).toHaveLength(1);
   });
+
+  it("does not match a keyword as a substring of an unrelated word (e.g. 'gente' inside 'urgente')", () => {
+    // Regressão: "gente" era uma keyword de REACTION e `includes` casava
+    // dentro de "urgente"/"inteligente"/"agente", gerando um falso positivo
+    // de score 40/REACTION numa frase comum sem nenhum sinal real.
+    const segments: TranscriptSegment[] = [
+      { start: 10, end: 12, text: "isso e muito inteligente e urgente" },
+    ];
+
+    const windows = analyzeContextStage(segments, [], []);
+
+    expect(windows).toHaveLength(1);
+    expect(windows[0].score).toBe(0);
+    expect(windows[0].category).toBe("SPOKEN_MOMENT");
+  });
 });

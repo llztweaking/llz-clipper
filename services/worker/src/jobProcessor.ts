@@ -117,7 +117,7 @@ export async function processNextJob(
         data: { status: "DETECTING_CLIPS", currentStep: "Detectando clipes", progress: 93 },
       });
 
-      const clipCandidates = detectClipsStage(scoredWindows);
+      const clipCandidates = detectClipsStage(scoredWindows, metadata.durationSec);
 
       await prisma.job.update({
         where: { id: job.id },

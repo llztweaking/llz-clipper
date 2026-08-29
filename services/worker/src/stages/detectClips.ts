@@ -17,19 +17,29 @@ export interface ClipCandidate {
   scoreReason: string;
 }
 
-function expandWindow(start: number, end: number): { start: number; end: number } {
+function expandWindow(
+  start: number,
+  end: number,
+  videoDurationSec: number
+): { start: number; end: number } {
   let duration = end - start;
 
   if (duration < MIN_CLIP_DURATION_SEC) {
     const extra = (MIN_CLIP_DURATION_SEC - duration) / 2;
     start = Math.max(0, start - extra);
-    end = end + extra;
+    end = start + MIN_CLIP_DURATION_SEC;
     duration = end - start;
   }
 
   if (duration > MAX_CLIP_DURATION_SEC) {
     end = start + MAX_CLIP_DURATION_SEC;
   }
+
+  // Nunca ultrapassa a duração real do VOD -- um clipe não pode apontar
+  // para além do arquivo de origem, mesmo que isso resulte num clipe
+  // mais curto que MIN_CLIP_DURATION_SEC quando o VOD inteiro é curto.
+  end = Math.min(end, videoDurationSec);
+  start = Math.max(0, Math.min(start, end));
 
   return { start, end };
 }
@@ -45,14 +55,14 @@ function buildTitle(text: string, category: ClipCategory): string {
   return words.length < trimmed.length ? `${words}…` : words;
 }
 
-export function detectClipsStage(windows: ScoredWindow[]): ClipCandidate[] {
+export function detectClipsStage(windows: ScoredWindow[], videoDurationSec: number): ClipCandidate[] {
   const candidates = windows.filter((w) => w.score >= MIN_CLIP_SCORE).sort((a, b) => b.score - a.score);
   const accepted: ClipCandidate[] = [];
 
   for (const window of candidates) {
     if (accepted.length >= MAX_CLIPS_PER_VOD) break;
 
-    const { start, end } = expandWindow(window.start, window.end);
+    const { start, end } = expandWindow(window.start, window.end, videoDurationSec);
     const isOverlapping = accepted.some((c) => overlaps({ start: c.startTime, end: c.endTime }, { start, end }));
     if (isOverlapping) continue;
 

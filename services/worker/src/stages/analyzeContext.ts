@@ -20,10 +20,19 @@ export interface ScoredWindow {
   reasons: string[];
 }
 
+function escapeRegExp(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function matchesKeyword(text: string, keyword: string): boolean {
+  const pattern = new RegExp(`(?<![\\p{L}\\p{N}])${escapeRegExp(keyword)}(?![\\p{L}\\p{N}])`, "iu");
+  return pattern.test(text);
+}
+
 function matchKeywordCategory(text: string): ClipCategory | null {
   const lower = text.toLowerCase();
   for (const [category, keywords] of Object.entries(CATEGORY_KEYWORDS) as [ClipCategory, string[]][]) {
-    if (keywords.some((keyword) => lower.includes(keyword))) {
+    if (keywords.some((keyword) => matchesKeyword(lower, keyword))) {
       return category;
     }
   }

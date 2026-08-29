@@ -3,7 +3,7 @@ import type { ClipCategory } from "@llz-clipper/database";
 export const CATEGORY_KEYWORDS: Record<ClipCategory, string[]> = {
   PLAY: ["que jogada", "consegui pegar", "olha essa jogada", "matei"],
   FUNNY: ["kkkk", "kkkkk", "mano do céu", "não acredito nisso"],
-  REACTION: ["meu deus", "não pode ser", "sério isso", "gente"],
+  REACTION: ["meu deus", "não pode ser", "sério isso"],
   FAIL: ["morri", "affs", "que ódio", "perdi"],
   CLUTCH: ["consegui", "vamos que vamos", "let's go", "isso aí"],
   SPOKEN_MOMENT: [],

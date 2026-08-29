@@ -4,6 +4,7 @@ interface ClipCardProps {
   clip: Clip;
   onApprove: () => void;
   onReject: () => void;
+  onEdit?: () => void;
 }
 
 const CATEGORY_LABELS: Record<ClipCategory, string> = {
@@ -22,7 +23,7 @@ function formatDuration(seconds: number): string {
   return `${m}:${String(s).padStart(2, "0")}`;
 }
 
-export function ClipCard({ clip, onApprove, onReject }: ClipCardProps) {
+export function ClipCard({ clip, onApprove, onReject, onEdit }: ClipCardProps) {
   const duration = clip.endTime - clip.startTime;
 
   return (
@@ -39,7 +40,12 @@ export function ClipCard({ clip, onApprove, onReject }: ClipCardProps) {
           <button onClick={onReject}>Rejeitar</button>
         </div>
       )}
-      {clip.status === "APPROVED" && <p className="clip-status-approved">Aprovado</p>}
+      {clip.status === "APPROVED" && (
+        <div className="clip-actions">
+          <p className="clip-status-approved">Aprovado</p>
+          {onEdit && <button onClick={onEdit}>Editar</button>}
+        </div>
+      )}
       {clip.status === "REJECTED" && <p className="clip-status-rejected">Rejeitado</p>}
     </div>
   );

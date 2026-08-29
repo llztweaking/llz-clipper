@@ -46,11 +46,16 @@ describe("ClipCard", () => {
     expect(onReject).toHaveBeenCalled();
   });
 
-  it("shows an approved status message instead of action buttons once approved", () => {
-    render(<ClipCard clip={{ ...baseClip, status: "APPROVED" }} onApprove={vi.fn()} onReject={vi.fn()} />);
+  it("shows an approved status message and an Editar button once approved", async () => {
+    const onEdit = vi.fn();
+    const user = userEvent.setup();
+    render(<ClipCard clip={{ ...baseClip, status: "APPROVED" }} onApprove={vi.fn()} onReject={vi.fn()} onEdit={onEdit} />);
 
     expect(screen.getByText("Aprovado")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Aprovar" })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Editar" }));
+    expect(onEdit).toHaveBeenCalled();
   });
 
   it("shows a rejected status message instead of action buttons once rejected", () => {

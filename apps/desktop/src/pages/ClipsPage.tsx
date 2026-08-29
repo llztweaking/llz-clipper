@@ -1,9 +1,11 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useVods } from "../hooks/useVods";
 import { useClips } from "../hooks/useClips";
 import { ClipCard } from "../components/ClipCard";
 
 export function ClipsPage() {
+  const navigate = useNavigate();
   const { vods } = useVods();
   const completedVods = vods.filter((vod) => vod.jobs?.[0]?.status === "COMPLETED");
   const [selectedVodId, setSelectedVodId] = useState<string>("");
@@ -35,6 +37,7 @@ export function ClipsPage() {
               clip={clip}
               onApprove={() => void approve(clip.id)}
               onReject={() => void reject(clip.id)}
+              onEdit={() => navigate(`/editor/${clip.id}`)}
             />
           ))}
         </div>

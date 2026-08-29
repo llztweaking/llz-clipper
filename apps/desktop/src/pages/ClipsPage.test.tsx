@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { ClipsPage } from "./ClipsPage";
 import * as vodsApi from "../services/vodsApi";
 import * as clipsApi from "../services/clipsApi";
@@ -45,6 +46,17 @@ const sampleClip = {
   createdAt: "2026-01-01T00:00:00.000Z",
 };
 
+function renderClipsPage() {
+  return render(
+    <MemoryRouter>
+      <Routes>
+        <Route path="/" element={<ClipsPage />} />
+        <Route path="/editor/:clipId" element={<p>Tela do editor</p>} />
+      </Routes>
+    </MemoryRouter>
+  );
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(vodsApi.listVods).mockResolvedValue([completedVod, queuedVod]);
@@ -54,14 +66,14 @@ beforeEach(() => {
 
 describe("ClipsPage", () => {
   it("lists only COMPLETED VODs in the selector", async () => {
-    render(<ClipsPage />);
+    renderClipsPage();
 
     await waitFor(() => expect(screen.getByText("stream.mp4")).toBeInTheDocument());
     expect(screen.queryByText("not-done-yet.mp4")).not.toBeInTheDocument();
   });
 
   it("shows a placeholder message before a VOD is selected", async () => {
-    render(<ClipsPage />);
+    renderClipsPage();
     await waitFor(() => expect(screen.getByText("stream.mp4")).toBeInTheDocument());
 
     expect(screen.getByText("Selecione um VOD para ver os clipes detectados.")).toBeInTheDocument();
@@ -69,7 +81,7 @@ describe("ClipsPage", () => {
 
   it("loads and shows clips once a VOD is selected", async () => {
     const user = userEvent.setup();
-    render(<ClipsPage />);
+    renderClipsPage();
     await waitFor(() => expect(screen.getByText("stream.mp4")).toBeInTheDocument());
 
     await user.selectOptions(screen.getByRole("combobox"), "v1");
@@ -81,7 +93,7 @@ describe("ClipsPage", () => {
   it("shows a message when the selected VOD has no detected clips", async () => {
     vi.mocked(clipsApi.listClips).mockResolvedValue([]);
     const user = userEvent.setup();
-    render(<ClipsPage />);
+    renderClipsPage();
     await waitFor(() => expect(screen.getByText("stream.mp4")).toBeInTheDocument());
 
     await user.selectOptions(screen.getByRole("combobox"), "v1");
@@ -91,7 +103,7 @@ describe("ClipsPage", () => {
 
   it("approves a clip from the list", async () => {
     const user = userEvent.setup();
-    render(<ClipsPage />);
+    renderClipsPage();
     await waitFor(() => expect(screen.getByText("stream.mp4")).toBeInTheDocument());
     await user.selectOptions(screen.getByRole("combobox"), "v1");
     await waitFor(() => expect(screen.getByText("Que jogada incrível")).toBeInTheDocument());
@@ -99,5 +111,18 @@ describe("ClipsPage", () => {
     await user.click(screen.getByRole("button", { name: "Aprovar" }));
 
     expect(clipsApi.updateClipStatus).toHaveBeenCalledWith("c1", "APPROVED");
+  });
+
+  it("navigates to /editor/:clipId when Editar is clicked on an approved clip", async () => {
+    vi.mocked(clipsApi.listClips).mockResolvedValue([{ ...sampleClip, status: "APPROVED" }]);
+    const user = userEvent.setup();
+    renderClipsPage();
+    await waitFor(() => expect(screen.getByText("stream.mp4")).toBeInTheDocument());
+    await user.selectOptions(screen.getByRole("combobox"), "v1");
+    await waitFor(() => expect(screen.getByText("Que jogada incrível")).toBeInTheDocument());
+
+    await user.click(screen.getByRole("button", { name: "Editar" }));
+
+    expect(await screen.findByText("Tela do editor")).toBeInTheDocument();
   });
 });

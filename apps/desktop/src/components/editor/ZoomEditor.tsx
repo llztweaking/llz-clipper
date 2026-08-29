@@ -28,7 +28,11 @@ export function ZoomEditor({ zooms, onChange }: ZoomEditorProps) {
             type="number"
             step={0.1}
             value={point.time}
-            onChange={(event) => updatePoint(index, "time", Number(event.target.value))}
+            onChange={(event) => {
+              const value = event.target.valueAsNumber;
+              if (Number.isNaN(value)) return;
+              updatePoint(index, "time", value);
+            }}
             aria-label={`Tempo do ponto de zoom ${index + 1}`}
           />
           <input
@@ -36,7 +40,11 @@ export function ZoomEditor({ zooms, onChange }: ZoomEditorProps) {
             step={0.1}
             min={1}
             value={point.scale}
-            onChange={(event) => updatePoint(index, "scale", Number(event.target.value))}
+            onChange={(event) => {
+              const value = event.target.valueAsNumber;
+              if (Number.isNaN(value)) return;
+              updatePoint(index, "scale", value);
+            }}
             aria-label={`Nível do ponto de zoom ${index + 1}`}
           />
           <button onClick={() => removePoint(index)}>Remover</button>

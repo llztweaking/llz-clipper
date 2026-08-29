@@ -28,14 +28,22 @@ export function CaptionEditor({ captions, onChange }: CaptionEditorProps) {
             type="number"
             step={0.1}
             value={caption.start}
-            onChange={(event) => updateCaption(index, "start", Number(event.target.value))}
+            onChange={(event) => {
+              const value = event.target.valueAsNumber;
+              if (Number.isNaN(value)) return;
+              updateCaption(index, "start", value);
+            }}
             aria-label={`Início da legenda ${index + 1}`}
           />
           <input
             type="number"
             step={0.1}
             value={caption.end}
-            onChange={(event) => updateCaption(index, "end", Number(event.target.value))}
+            onChange={(event) => {
+              const value = event.target.valueAsNumber;
+              if (Number.isNaN(value)) return;
+              updateCaption(index, "end", value);
+            }}
             aria-label={`Fim da legenda ${index + 1}`}
           />
           <input

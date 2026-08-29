@@ -25,9 +25,11 @@ async function createOwnedStreamer(userId: string) {
   return prisma.streamer.create({ data: { userId, name: "Strm", username: "strm" } });
 }
 
-async function createApprovedClip(userId: string) {
+async function createApprovedClip(userId: string, durationSec?: number) {
   const streamer = await createOwnedStreamer(userId);
-  const vod = await prisma.vOD.create({ data: { filename: "v.mp4", sourcePath: "/tmp/v.mp4", streamerId: streamer.id } });
+  const vod = await prisma.vOD.create({
+    data: { filename: "v.mp4", sourcePath: "/tmp/v.mp4", streamerId: streamer.id, durationSec: durationSec ?? null },
+  });
   const clip = await prisma.clip.create({
     data: { vodId: vod.id, startTime: 10, endTime: 30, title: "Clipe", status: "APPROVED" },
   });
@@ -112,6 +114,36 @@ describe("PATCH /clips/:id/edit-plan", () => {
       url: `/clips/${clip.id}/edit-plan`,
       headers: { authorization: `Bearer ${token}` },
       payload: { ...basePayload, segments: [{ start: 20, end: 10 }] },
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json().error).toBe("invalid_segment");
+  });
+
+  it("rejects a segment with a negative start", async () => {
+    const { token, user } = await createAuthenticatedUser("USER");
+    const clip = await createApprovedClip(user.id);
+
+    const response = await app.inject({
+      method: "PATCH",
+      url: `/clips/${clip.id}/edit-plan`,
+      headers: { authorization: `Bearer ${token}` },
+      payload: { ...basePayload, segments: [{ start: -5, end: 10 }] },
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json().error).toBe("invalid_segment");
+  });
+
+  it("rejects a segment whose end exceeds the VOD's duration", async () => {
+    const { token, user } = await createAuthenticatedUser("USER");
+    const clip = await createApprovedClip(user.id, 60);
+
+    const response = await app.inject({
+      method: "PATCH",
+      url: `/clips/${clip.id}/edit-plan`,
+      headers: { authorization: `Bearer ${token}` },
+      payload: { ...basePayload, segments: [{ start: 10, end: 90 }] },
     });
 
     expect(response.statusCode).toBe(400);

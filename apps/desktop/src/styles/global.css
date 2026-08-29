@@ -110,3 +110,56 @@ input {
   color: var(--danger);
   font-size: 13px;
 }
+
+.video-preview {
+  position: relative;
+  display: inline-block;
+}
+
+.video-preview video {
+  display: block;
+  max-width: 100%;
+}
+
+.video-preview-caption {
+  position: absolute;
+  bottom: 32px;
+  left: 50%;
+  transform: translateX(-50%);
+  margin: 0;
+  padding: 6px 12px;
+  background: rgba(0, 0, 0, 0.7);
+  color: white;
+  font-size: 14px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+.video-preview-watermark {
+  position: absolute;
+  padding: 4px 8px;
+  background: rgba(0, 0, 0, 0.5);
+  color: white;
+  font-size: 12px;
+  border-radius: 4px;
+}
+
+.video-preview-watermark-top-left {
+  top: 12px;
+  left: 12px;
+}
+
+.video-preview-watermark-top-right {
+  top: 12px;
+  right: 12px;
+}
+
+.video-preview-watermark-bottom-left {
+  bottom: 12px;
+  left: 12px;
+}
+
+.video-preview-watermark-bottom-right {
+  bottom: 12px;
+  right: 12px;
+}

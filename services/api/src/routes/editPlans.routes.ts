@@ -50,6 +50,7 @@ export function registerEditPlanRoutes(app: FastifyInstance): void {
 
     const clip = await prisma.clip.findFirst({
       where: { id, vod: { streamer: { userId: request.authUser!.id } } },
+      include: { vod: { select: { durationSec: true } } },
     });
     if (!clip) return reply.code(404).send({ error: "not_found", message: "Clipe não encontrado" });
 
@@ -61,6 +62,12 @@ export function registerEditPlanRoutes(app: FastifyInstance): void {
 
     if (segments[0].start >= segments[0].end) {
       return reply.code(400).send({ error: "invalid_segment", message: "Início do corte deve ser antes do fim" });
+    }
+    if (segments[0].start < 0) {
+      return reply.code(400).send({ error: "invalid_segment", message: "Início do corte não pode ser negativo" });
+    }
+    if (clip.vod.durationSec !== null && segments[0].end > clip.vod.durationSec) {
+      return reply.code(400).send({ error: "invalid_segment", message: "Fim do corte excede a duração do VOD" });
     }
 
     for (const cue of sfx ?? []) {

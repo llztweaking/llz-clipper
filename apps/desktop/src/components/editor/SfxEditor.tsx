@@ -35,7 +35,11 @@ export function SfxEditor({ sfx, onChange }: SfxEditorProps) {
             type="number"
             step={0.1}
             value={cue.time}
-            onChange={(event) => updateTime(index, Number(event.target.value))}
+            onChange={(event) => {
+              const value = event.target.valueAsNumber;
+              if (Number.isNaN(value)) return;
+              updateTime(index, value);
+            }}
             aria-label={`Tempo do efeito sonoro ${index + 1}`}
           />
           <button onClick={() => removeCue(index)}>Remover</button>

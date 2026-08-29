@@ -26,3 +26,11 @@ export function retryVod(id: string): Promise<{ jobId: string }> {
 export function getVodThumbnail(id: string): Promise<Blob> {
   return authedRequestBlob(`/vods/${id}/thumbnail`);
 }
+
+export function getVod(id: string): Promise<Vod> {
+  return authedRequest(`/vods/${id}`);
+}
+
+export function getVodVideo(id: string): Promise<Blob> {
+  return authedRequestBlob(`/vods/${id}/video`);
+}

@@ -141,4 +141,54 @@ export interface Clip {
   scoreReason: string | null;
   status: ClipStatus;
   createdAt: string;
+  editPlan?: EditPlan;
+}
+
+export interface EditPlanSegment {
+  start: number;
+  end: number;
+}
+
+export interface EditPlanCaption {
+  start: number;
+  end: number;
+  text: string;
+}
+
+export interface ZoomPoint {
+  time: number;
+  scale: number;
+}
+
+export interface SfxCue {
+  time: number;
+  filePath: string;
+}
+
+export interface MusicTrack {
+  filePath: string;
+  volume: number;
+}
+
+export type WatermarkPosition = "top-left" | "top-right" | "bottom-left" | "bottom-right";
+
+export interface Watermark {
+  filePath: string;
+  position: WatermarkPosition;
+}
+
+export interface EditPlan {
+  id: string;
+  clipId: string;
+  title: string;
+  segments: EditPlanSegment[];
+  captions: EditPlanCaption[] | null;
+  zooms: ZoomPoint[] | null;
+  sfx: SfxCue[] | null;
+  music: MusicTrack | null;
+  watermark: Watermark | null;
+  format: string;
+  resolution: string;
+  fps: number;
+  updatedAt: string;
 }

@@ -10,7 +10,9 @@ real de metadados/thumbnail via FFmpeg, através de um Job e worker reais;
 e a **Fase 4 (Pipeline de IA)**: transcrição real via whisper.cpp, análise
 heurística de áudio/vídeo, detecção de clipes candidatos e rascunho
 automático de plano de edição, com tela de revisão para aprovar/rejeitar
-cada clipe. Edição manual, preview e render de clipes (Fase 5) são a
+cada clipe; e a **Fase 5A (Editor manual)**: ajuste de corte, legendas,
+zoom, SFX, música e marca d'água por clipe aprovado, com prévia real
+(vídeo + overlays CSS). Render de fato do vídeo final (Fase 5B) é a
 próxima etapa — ver `docs/superpowers/specs/`.
 
 ## Requisitos
@@ -175,8 +177,26 @@ sufixo `.en`) — o produto é para streamers em português.
 
 Depois que o worker processa um VOD, os clipes detectados aparecem na tela
 **Clipes** do app (selecione o VOD na lista), onde dá para aprovar ou
-rejeitar cada um. Edição de fato (zoom, SFX, música, ajuste de legendas) e
-render continuam sendo Fase 5.
+rejeitar cada um. Edição de fato (zoom, SFX, música, ajuste de legendas) —
+ver seção "Editor manual de clipes (Fase 5A)" abaixo — e render (Fase 5B)
+completam o restante do fluxo.
+
+## Editor manual de clipes (Fase 5A)
+
+Clipes aprovados na tela **Clipes** ganham um botão **Editar**, que abre
+uma tela de edição com prévia real (o vídeo de verdade, tocando o trecho
+do corte, com legendas e marca d'água sobrepostas via CSS — o zoom é uma
+aproximação visual, não idêntico ao render final).
+
+Dá pra ajustar: início/fim do corte, texto e tempo de cada legenda, pontos
+de zoom (tempo + nível), efeitos sonoros e música de fundo (arquivos
+locais, escolhidos por um seletor nativo), e uma marca d'água (imagem
+local + posição em um dos 4 cantos).
+
+As alterações só são salvas ao clicar em **Salvar alterações** — nada é
+persistido automaticamente. Render de fato do vídeo final (queima de
+legenda, zoom, mixagem de áudio, watermark) é a Fase 5B, ainda não
+implementada.
 
 ## Notas técnicas relevantes
 
@@ -195,8 +215,7 @@ render continuam sendo Fase 5.
 
 **Fase 2 (Desktop Shell)** está implementada: login/ativação, sidebar,
 Streamers, Configurações (aba Conta) e Admin, todos funcionais contra a
-API real. `/clips` agora é real (ver Fase 4 abaixo); `/editor` continua
-placeholder "em breve" — seu backend é Fase 5.
+API real. `/clips` e `/editor` agora são reais (ver Fases 4 e 5A abaixo).
 
 **Fase 3 (Pipeline de VOD)** está implementada: seleção de VOD local,
 cópia para storage, extração real de metadados e thumbnail via FFmpeg,
@@ -205,9 +224,12 @@ tudo através de um Job e worker reais.
 **Fase 4 (Pipeline de IA)** está implementada: transcrição real via
 whisper.cpp, análise heurística de áudio/vídeo (sem LLM), detecção de
 clipes com pontuação e categoria, rascunho automático de EditPlan, e tela
-de revisão (aprovar/rejeitar). Edição manual, preview e render de clipes
-continuam sendo Fase 5.
+de revisão (aprovar/rejeitar).
 
-- Editor, preview, render, export — Fase 5
+**Fase 5A (Editor manual)** está implementada: ajuste de corte, legendas,
+zoom, SFX, música e marca d'água por clipe aprovado, com prévia real
+(vídeo + overlays CSS). Render do vídeo final continua sendo Fase 5B.
+
+- Render do vídeo final, export — Fase 5B
 - Device-lock / limite de dispositivos por key, renovação de key — schema
   preparado, sem endpoint ainda

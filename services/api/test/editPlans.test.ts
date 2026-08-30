@@ -105,6 +105,23 @@ describe("PATCH /clips/:id/edit-plan", () => {
     expect(response.json().error).toBe("invalid_status");
   });
 
+  it("accepts editing a COMPLETED clip and moves its status back to APPROVED", async () => {
+    const { token, user } = await createAuthenticatedUser("USER");
+    const clip = await createApprovedClip(user.id);
+    await prisma.clip.update({ where: { id: clip.id }, data: { status: "COMPLETED" } });
+
+    const response = await app.inject({
+      method: "PATCH",
+      url: `/clips/${clip.id}/edit-plan`,
+      headers: { authorization: `Bearer ${token}` },
+      payload: basePayload,
+    });
+
+    expect(response.statusCode).toBe(200);
+    const updatedClip = await prisma.clip.findUnique({ where: { id: clip.id } });
+    expect(updatedClip?.status).toBe("APPROVED");
+  });
+
   it("rejects a segment where start >= end", async () => {
     const { token, user } = await createAuthenticatedUser("USER");
     const clip = await createApprovedClip(user.id);

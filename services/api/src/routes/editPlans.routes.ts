@@ -54,8 +54,10 @@ export function registerEditPlanRoutes(app: FastifyInstance): void {
     });
     if (!clip) return reply.code(404).send({ error: "not_found", message: "Clipe não encontrado" });
 
-    if (clip.status !== "APPROVED") {
-      return reply.code(400).send({ error: "invalid_status", message: "Só é possível editar clipes aprovados" });
+    if (clip.status !== "APPROVED" && clip.status !== "COMPLETED") {
+      return reply
+        .code(400)
+        .send({ error: "invalid_status", message: "Só é possível editar clipes aprovados ou já renderizados" });
     }
 
     const { title, segments, captions, zooms, sfx, music, watermark } = parsed.data;
@@ -98,7 +100,7 @@ export function registerEditPlanRoutes(app: FastifyInstance): void {
       }),
       prisma.clip.update({
         where: { id },
-        data: { startTime: segments[0].start, endTime: segments[0].end },
+        data: { startTime: segments[0].start, endTime: segments[0].end, status: "APPROVED" },
       }),
     ]);
 

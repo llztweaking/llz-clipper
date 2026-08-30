@@ -100,8 +100,17 @@ describe("processNextRender", () => {
   it("processes only the oldest QUEUED render when several exist", async () => {
     const { clip: clip1 } = await createApprovedClipWithVod(sourceVideoPath);
     const { clip: clip2 } = await createApprovedClipWithVod(sourceVideoPath);
-    await prisma.render.create({ data: { clipId: clip1.id, status: "QUEUED" } });
-    const secondRender = await prisma.render.create({ data: { clipId: clip2.id, status: "QUEUED" } });
+    // Explicit, distinct createdAt values: processNextRender picks the
+    // oldest QUEUED render via `orderBy: { createdAt: "asc" }, take: 1`(ish),
+    // and Prisma's createdAt has only millisecond resolution, so two rows
+    // created back-to-back in the same test can tie and make the ordering
+    // nondeterministic.
+    await prisma.render.create({
+      data: { clipId: clip1.id, status: "QUEUED", createdAt: new Date("2026-01-01T00:00:00.000Z") },
+    });
+    const secondRender = await prisma.render.create({
+      data: { clipId: clip2.id, status: "QUEUED", createdAt: new Date("2026-01-01T00:05:00.000Z") },
+    });
 
     const storageService = new LocalStorageService(storageRoot);
     const videoProcessor = new FFmpegProcessor();
@@ -109,5 +118,55 @@ describe("processNextRender", () => {
 
     const updatedSecond = await prisma.render.findUnique({ where: { id: secondRender.id } });
     expect(updatedSecond?.status).toBe("QUEUED");
+  }, 60000);
+
+  it("marks the Render FAILED with an informative error when the EditPlan's watermark is malformed (e.g. inherited unvalidated from Streamer.watermark)", async () => {
+    const { clip } = await createApprovedClipWithVod(sourceVideoPath);
+    // Streamer.watermark accepts arbitrary JSON with zero validation, and a
+    // worker-generated EditPlan draft can inherit it verbatim -- so a clip
+    // can carry a malformed watermark (here: missing filePath) into a render
+    // without ever passing through the validated PATCH /clips/:id/edit-plan
+    // path. This must fail cleanly rather than crash renderProcessor or
+    // silently reach ffmpeg.
+    await prisma.editPlan.update({
+      where: { clipId: clip.id },
+      data: { watermark: { position: "bottom-right" } },
+    });
+    const render = await prisma.render.create({ data: { clipId: clip.id, status: "QUEUED" } });
+
+    const storageService = new LocalStorageService(storageRoot);
+    const videoProcessor = new FFmpegProcessor();
+    const processed = await processNextRender(storageService, videoProcessor);
+    expect(processed).toBe(true);
+
+    const updatedRender = await prisma.render.findUnique({ where: { id: render.id } });
+    expect(updatedRender?.status).toBe("FAILED");
+    expect(updatedRender?.error).toMatch(/watermark/i);
+    expect(updatedRender?.error).toMatch(/filePath/i);
+
+    const updatedClip = await prisma.clip.findUnique({ where: { id: clip.id } });
+    expect(updatedClip?.status).toBe("APPROVED");
+  }, 60000);
+
+  it("marks the Render FAILED with an informative error when the EditPlan's watermark points at a file that doesn't exist", async () => {
+    const { clip } = await createApprovedClipWithVod(sourceVideoPath);
+    await prisma.editPlan.update({
+      where: { clipId: clip.id },
+      data: {
+        watermark: { filePath: path.join(storageRoot, "no-such-logo.png"), position: "bottom-right" },
+      },
+    });
+    const render = await prisma.render.create({ data: { clipId: clip.id, status: "QUEUED" } });
+
+    const storageService = new LocalStorageService(storageRoot);
+    const videoProcessor = new FFmpegProcessor();
+    await processNextRender(storageService, videoProcessor);
+
+    const updatedRender = await prisma.render.findUnique({ where: { id: render.id } });
+    expect(updatedRender?.status).toBe("FAILED");
+    expect(updatedRender?.error).toMatch(/watermark/i);
+
+    const updatedClip = await prisma.clip.findUnique({ where: { id: clip.id } });
+    expect(updatedClip?.status).toBe("APPROVED");
   }, 60000);
 });

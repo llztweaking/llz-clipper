@@ -1,3 +1,5 @@
+import { stat } from "node:fs/promises";
+import path from "node:path";
 import { prisma } from "@llz-clipper/database";
 import { LocalStorageService, type StorageService } from "@llz-clipper/storage";
 import {
@@ -6,12 +8,63 @@ import {
   type RenderMusicTrack,
   type RenderSfxCue,
   type RenderWatermark,
+  type RenderWatermarkPosition,
   type RenderZoomPoint,
   type VideoProcessor,
 } from "@llz-clipper/ffmpeg";
 
 const defaultStorageService = new LocalStorageService();
 const defaultVideoProcessor = new FFmpegProcessor();
+
+// A clip's EditPlan.watermark can come from two very different places:
+// either explicitly through PATCH /clips/:id/edit-plan (which validates the
+// file via validateFilePath in services/api/src/routes/editPlans.routes.ts),
+// or inherited as-is from Streamer.watermark when the worker auto-generates
+// an EditPlan draft (see stages/generateEditPlanDraft.ts) -- and
+// Streamer.watermark is accepted by services/api/src/routes/streamers.routes.ts
+// as arbitrary, completely unvalidated JSON. So a clip that's approved and
+// rendered without ever being opened in the editor can carry a malformed
+// watermark straight into buildRenderCommand/ffmpeg. Re-validate defensively
+// at this render boundary, mirroring the same shape/extension/stat checks
+// editPlans.routes.ts already performs for the explicit-edit path.
+const WATERMARK_POSITIONS: readonly RenderWatermarkPosition[] = [
+  "top-left",
+  "top-right",
+  "bottom-left",
+  "bottom-right",
+];
+const WATERMARK_IMAGE_EXTENSIONS = [".png", ".jpg", ".jpeg"];
+
+function isWatermarkPosition(value: unknown): value is RenderWatermarkPosition {
+  return typeof value === "string" && (WATERMARK_POSITIONS as readonly string[]).includes(value);
+}
+
+export async function resolveWatermark(raw: unknown): Promise<RenderWatermark | null> {
+  if (raw === null || raw === undefined) return null;
+  if (typeof raw !== "object" || Array.isArray(raw)) {
+    throw new Error("Watermark inválido: formato inesperado");
+  }
+
+  const candidate = raw as Record<string, unknown>;
+  if (typeof candidate.filePath !== "string" || candidate.filePath.length === 0) {
+    throw new Error("Watermark inválido: filePath ausente ou inválido");
+  }
+  if (!isWatermarkPosition(candidate.position)) {
+    throw new Error(`Watermark inválido: posição desconhecida "${String(candidate.position)}"`);
+  }
+
+  const extension = path.extname(candidate.filePath).toLowerCase();
+  if (!WATERMARK_IMAGE_EXTENSIONS.includes(extension)) {
+    throw new Error(`Watermark inválido: formato não suportado "${extension}"`);
+  }
+  try {
+    await stat(candidate.filePath);
+  } catch {
+    throw new Error(`Watermark inválido: arquivo não encontrado em "${candidate.filePath}"`);
+  }
+
+  return { filePath: candidate.filePath, position: candidate.position };
+}
 
 export async function processNextRender(
   storageService: StorageService = defaultStorageService,
@@ -40,6 +93,11 @@ export async function processNextRender(
     const [targetWidth, targetHeight] = editPlan.resolution.split("x").map(Number);
     const outputPath = await storageService.prepareRenderOutput(clip.id, render.id);
     let lastReportedPercent = -1;
+    // Validated at this boundary (see resolveWatermark above) because a
+    // watermark can reach here unvalidated, inherited from Streamer.watermark
+    // during EditPlan draft auto-generation rather than through the
+    // validated PATCH /clips/:id/edit-plan path.
+    const watermark = await resolveWatermark(editPlan.watermark);
 
     await videoProcessor.renderClip(
       {
@@ -56,7 +114,7 @@ export async function processNextRender(
         zooms: editPlan.zooms as unknown as RenderZoomPoint[] | null,
         sfx: editPlan.sfx as unknown as RenderSfxCue[] | null,
         music: editPlan.music as unknown as RenderMusicTrack | null,
-        watermark: editPlan.watermark as unknown as RenderWatermark | null,
+        watermark,
       },
       (percent) => {
         if (percent !== lastReportedPercent) {

@@ -24,8 +24,9 @@ describe("buildRenderCommand", () => {
     const args = buildRenderCommand(baseInput);
     const joined = args.join(" ");
 
-    expect(args[0]).toBe("-i");
-    expect(args[1]).toBe(baseInput.sourcePath);
+    expect(args[0]).toBe("-hide_banner");
+    expect(args[1]).toBe("-i");
+    expect(args[2]).toBe(baseInput.sourcePath);
     expect(joined).toContain("trim=start=10:end=30");
     expect(joined).toContain("scale=1080:1920");
     expect(joined).not.toContain("concat=");
@@ -56,6 +57,28 @@ describe("buildRenderCommand", () => {
     expect(joined).toContain("concat=n=3:v=1:a=0[vzoomed]");
     // scale 1.5 on the 608x1080 base crop -> w=405, h=720 (rounded)
     expect(joined).toContain("crop=w=405:h=720");
+  });
+
+  it("normalizes SAR to 1:1 immediately after scale even with no zoom points", () => {
+    const args = buildRenderCommand(baseInput);
+    const joined = args.join(" ");
+
+    expect(joined).toContain("scale=1080:1920,setsar=1[vzoomed]");
+  });
+
+  it("normalizes SAR to 1:1 after each zoom segment's scale so concat doesn't fail on mismatched SAR", () => {
+    const args = buildRenderCommand({
+      ...baseInput,
+      zooms: [
+        { time: 5, scale: 1.5 },
+        { time: 10, scale: 2 },
+      ],
+    });
+    const joined = args.join(" ");
+
+    expect(joined).toContain("scale=1080:1920,setsar=1[vseg0]");
+    expect(joined).toContain("scale=1080:1920,setsar=1[vseg1]");
+    expect(joined).toContain("scale=1080:1920,setsar=1[vseg2]");
   });
 
   it("adds one drawtext filter per caption with escaped comma-separated timing", () => {
@@ -114,7 +137,7 @@ describe("buildRenderCommand", () => {
     expect(joined).toContain("-stream_loop -1 -i C:\\music\\song.mp3");
     expect(joined).toContain("atrim=start=0:end=20");
     expect(joined).toContain("volume=0.4");
-    expect(joined).toContain("amix=inputs=2:duration=first");
+    expect(joined).toContain("amix=inputs=2:duration=first:normalize=0:dropout_transition=0");
   });
 
   it("delays each SFX cue by its timestamp in milliseconds and mixes all of them in", () => {
@@ -131,7 +154,7 @@ describe("buildRenderCommand", () => {
     expect(joined).toContain("-i C:\\sfx\\b.wav");
     expect(joined).toContain("adelay=1500:all=1");
     expect(joined).toContain("adelay=3000:all=1");
-    expect(joined).toContain("amix=inputs=3:duration=first");
+    expect(joined).toContain("amix=inputs=3:duration=first:normalize=0:dropout_transition=0");
   });
 
   it("does not mix audio at all when there is no sfx and no music", () => {

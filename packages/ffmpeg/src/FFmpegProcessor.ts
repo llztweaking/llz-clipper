@@ -166,7 +166,11 @@ export class FFmpegProcessor implements VideoProcessor {
         if (code === 0) {
           resolve();
         } else {
-          reject(new Error(`ffmpeg exited with code ${code}: ${stderr.slice(0, 500)}`));
+          // buildRenderCommand always passes -hide_banner, but even so
+          // ffmpeg's actual error is the LAST thing it writes to stderr
+          // (the head can still contain filtergraph setup chatter), so
+          // take the tail rather than the head.
+          reject(new Error(`ffmpeg exited with code ${code}: ${stderr.slice(-500)}`));
         }
       });
     });

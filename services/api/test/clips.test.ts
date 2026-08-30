@@ -109,8 +109,22 @@ describe("GET /clips/:id", () => {
   it("includes the most recent render as latestRender on GET /clips/:id", async () => {
     const { token, user } = await createAuthenticatedUser("USER");
     const { clip } = await createVodWithClip(user.id, { status: "APPROVED" });
-    await prisma.render.create({ data: { clipId: clip.id, status: "FAILED", error: "antigo" } });
-    const latest = await prisma.render.create({ data: { clipId: clip.id, status: "COMPLETED", progress: 100, outputPath: "/x.mp4" } });
+    // Explicit, distinct createdAt values: latestRender is picked by
+    // `orderBy: { createdAt: ... }, take: 1`, and Prisma's createdAt has
+    // only millisecond resolution, so two rows created back-to-back in the
+    // same test can tie and make the ordering nondeterministic.
+    await prisma.render.create({
+      data: { clipId: clip.id, status: "FAILED", error: "antigo", createdAt: new Date("2026-01-01T00:00:00.000Z") },
+    });
+    const latest = await prisma.render.create({
+      data: {
+        clipId: clip.id,
+        status: "COMPLETED",
+        progress: 100,
+        outputPath: "/x.mp4",
+        createdAt: new Date("2026-01-01T00:05:00.000Z"),
+      },
+    });
 
     const response = await app.inject({
       method: "GET",

@@ -42,7 +42,7 @@ export function buildRenderCommand(input: RenderInput): string[] {
   const baseCropX = Math.round((input.sourceWidth - baseCropWidth) / 2);
   const baseCropY = Math.round((input.sourceHeight - baseCropHeight) / 2);
 
-  const args: string[] = ["-i", input.sourcePath];
+  const args: string[] = ["-hide_banner", "-i", input.sourcePath];
   const filters: string[] = [];
 
   zoomSegments.forEach((segment, i) => {
@@ -56,7 +56,13 @@ export function buildRenderCommand(input: RenderInput): string[] {
     filters.push(
       `[0:v]trim=start=${absStart}:end=${absEnd},setpts=PTS-STARTPTS,` +
         `crop=w=${cropW}:h=${cropH}:x=${cropX}:y=${cropY},` +
-        `scale=${input.targetWidth}:${input.targetHeight}[${label}]`
+        // Each segment's crop dimensions are independently rounded, so the
+        // resulting aspect ratio (and therefore the SAR that scale= would
+        // otherwise leave in place) can differ slightly between segments.
+        // concat requires matching SAR across all inputs, so force every
+        // segment to SAR 1:1 here -- this is also correct (and harmless)
+        // when there's only a single segment and no concat at all.
+        `scale=${input.targetWidth}:${input.targetHeight},setsar=1[${label}]`
     );
   });
 
@@ -115,7 +121,14 @@ export function buildRenderCommand(input: RenderInput): string[] {
 
   let audioLabel = "aorig";
   if (audioLabels.length > 1) {
-    filters.push(`${audioLabels.join("")}amix=inputs=${audioLabels.length}:duration=first[aout]`);
+    // normalize=0 keeps amix from dividing every input's volume by the
+    // input count (its default would audibly duck the original voice
+    // track whenever music or SFX is present); dropout_transition=0
+    // disables the ~2s volume ramp amix otherwise applies when a shorter
+    // input (e.g. a short SFX cue) ends.
+    filters.push(
+      `${audioLabels.join("")}amix=inputs=${audioLabels.length}:duration=first:normalize=0:dropout_transition=0[aout]`
+    );
     audioLabel = "aout";
   }
 

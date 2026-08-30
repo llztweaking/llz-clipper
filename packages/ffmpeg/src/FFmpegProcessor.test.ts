@@ -224,8 +224,9 @@ describe("FFmpegProcessor.renderClip", () => {
   it("rejects with a real ffmpeg error message when the source file doesn't exist", async () => {
     const processor = new FFmpegProcessor();
 
-    await expect(
-      processor.renderClip({
+    let caught: Error | undefined;
+    try {
+      await processor.renderClip({
         sourcePath: path.join(workDir, "does-not-exist.mp4"),
         sourceWidth: 320,
         sourceHeight: 240,
@@ -240,7 +241,68 @@ describe("FFmpegProcessor.renderClip", () => {
         sfx: null,
         music: null,
         watermark: null,
-      })
-    ).rejects.toThrow(/ffmpeg exited with code/);
+      });
+    } catch (err) {
+      caught = err as Error;
+    }
+
+    expect(caught).toBeInstanceOf(Error);
+    expect(caught!.message).toMatch(/ffmpeg exited with code/);
+    // Regression guard for I5: with -hide_banner and a stderr *tail* slice,
+    // the captured message must be ffmpeg's actual error, not the version
+    // banner / build configuration that used to always appear here.
+    expect(caught!.message).not.toMatch(/ffmpeg version/i);
+    expect(caught!.message).not.toMatch(/built with/i);
+    expect(caught!.message.toLowerCase()).toMatch(/no such file|does-not-exist/);
   }, 30000);
+
+  it("mixes an sfx cue and a music track into a zoomed render at production dimensions without crashing ffmpeg", async () => {
+    // Production-like dimensions: 1920x1080 source -> 1080x1920 target,
+    // the exact combination that exposes C1 (mismatched SAR across zoom
+    // segments causes ffmpeg's concat to abort with "Invalid argument").
+    // A zoom point plus an sfx cue and a music track together also exercise
+    // the audio-mixing branch (amix) that I3's fix touches, all in one
+    // real-ffmpeg render so a regression in either area fails this test.
+    const prodSourcePath = path.join(workDir, "source-1080p.mp4");
+    await execFileAsync("ffmpeg", [
+      "-f", "lavfi", "-i", "testsrc=duration=2:size=1920x1080:rate=30",
+      "-f", "lavfi", "-i", "sine=frequency=440:duration=2",
+      "-shortest", "-y", prodSourcePath,
+    ]);
+
+    const audioCuePath = path.join(workDir, "cue-880hz.wav");
+    await execFileAsync("ffmpeg", [
+      "-f", "lavfi", "-i", "sine=frequency=880:duration=1",
+      "-y", audioCuePath,
+    ]);
+
+    const outputPath = path.join(workDir, "render-audio-mix.mp4");
+    const processor = new FFmpegProcessor();
+
+    await processor.renderClip({
+      sourcePath: prodSourcePath,
+      sourceWidth: 1920,
+      sourceHeight: 1080,
+      outputPath,
+      segmentStartSec: 0,
+      segmentEndSec: 2,
+      targetWidth: 1080,
+      targetHeight: 1920,
+      fps: 30,
+      captions: null,
+      zooms: [{ time: 1, scale: 1.5 }],
+      sfx: [{ time: 0.5, filePath: audioCuePath }],
+      music: { filePath: audioCuePath, volume: 0.3 },
+      watermark: null,
+    });
+
+    const stats = await stat(outputPath);
+    expect(stats.size).toBeGreaterThan(0);
+
+    const metadata = await processor.probe(outputPath);
+    expect(metadata.width).toBe(1080);
+    expect(metadata.height).toBe(1920);
+    expect(metadata.durationSec).toBeGreaterThanOrEqual(1);
+    expect(metadata.durationSec).toBeLessThanOrEqual(3);
+  }, 60000);
 });

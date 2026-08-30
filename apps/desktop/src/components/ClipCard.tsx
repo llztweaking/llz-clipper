@@ -1,4 +1,5 @@
 import type { Clip, ClipCategory } from "../types";
+import { revealItemInDir } from "@tauri-apps/plugin-opener";
 
 interface ClipCardProps {
   clip: Clip;
@@ -44,6 +45,20 @@ export function ClipCard({ clip, onApprove, onReject, onEdit }: ClipCardProps) {
         <div className="clip-actions">
           <p className="clip-status-approved">Aprovado</p>
           {onEdit && <button onClick={onEdit}>Editar</button>}
+        </div>
+      )}
+      {clip.status === "RENDERING" && (
+        <div className="clip-actions">
+          <p>Renderizando… ({clip.latestRender?.progress ?? 0}%)</p>
+        </div>
+      )}
+      {clip.status === "COMPLETED" && (
+        <div className="clip-actions">
+          <p className="clip-status-approved">Renderizado</p>
+          {onEdit && <button onClick={onEdit}>Editar</button>}
+          {clip.latestRender?.outputPath && (
+            <button onClick={() => void revealItemInDir(clip.latestRender!.outputPath!)}>Abrir arquivo</button>
+          )}
         </div>
       )}
       {clip.status === "REJECTED" && <p className="clip-status-rejected">Rejeitado</p>}

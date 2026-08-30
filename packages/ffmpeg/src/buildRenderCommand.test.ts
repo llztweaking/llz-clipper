@@ -65,8 +65,22 @@ describe("buildRenderCommand", () => {
     });
     const joined = args.join(" ");
 
-    expect(joined).toContain("drawtext=text='Olha isso'");
+    expect(joined).toContain("drawtext=fontfile='C\\:/Windows/Fonts/arial.ttf':text='Olha isso'");
     expect(joined).toContain("enable='between(t\\,0\\,2)'");
+  });
+
+  it("points drawtext at a real font file so fontconfig's default \"Sans\" lookup can't crash it", () => {
+    const args = buildRenderCommand({
+      ...baseInput,
+      captions: [{ start: 0, end: 2, text: "Olha isso" }],
+    });
+    const joined = args.join(" ");
+
+    // Windows fontconfig can fail to resolve a default font without an
+    // explicit fontfile= option (observed as a real ffmpeg crash on this
+    // machine); the colon after the drive letter must be escaped for
+    // ffmpeg's filtergraph parser.
+    expect(joined).toContain("fontfile='C\\:/Windows/Fonts/arial.ttf'");
   });
 
   it("escapes colons and backslashes and substitutes single quotes in caption text", () => {
@@ -141,7 +155,10 @@ describe("buildRenderCommand", () => {
     const joined = args.join(" ");
 
     expect(joined).toContain("-loop 1 -i C:\\logo.png");
-    expect(joined).toContain(`overlay=${expr}`);
+    // shortest=1 makes the overlay stop when the (finite) main video branch
+    // ends, instead of running forever behind the indefinitely looped
+    // watermark image.
+    expect(joined).toContain(`overlay=shortest=1:${expr}`);
   });
 
   it("maps the final video and audio labels, sets fps and codecs, and writes progress to stdout", () => {

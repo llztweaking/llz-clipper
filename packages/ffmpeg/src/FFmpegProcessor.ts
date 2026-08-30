@@ -1,6 +1,7 @@
 import { spawn } from "node:child_process";
 import path from "node:path";
-import type { FfmpegStatus, FfprobeOutput, VideoMetadata, VideoProcessor } from "./types";
+import { buildRenderCommand } from "./buildRenderCommand";
+import type { FfmpegStatus, FfprobeOutput, RenderInput, VideoMetadata, VideoProcessor } from "./types";
 
 function resolveBinary(name: "ffmpeg" | "ffprobe"): string {
   const ffmpegPath = process.env.FFMPEG_PATH;
@@ -122,6 +123,53 @@ export class FFmpegProcessor implements VideoProcessor {
       timestamps.push(parseFloat(match[1]));
     }
     return timestamps;
+  }
+
+  async renderClip(input: RenderInput, onProgress?: (percent: number) => void): Promise<void> {
+    const ffmpegBin = resolveBinary("ffmpeg");
+    const args = buildRenderCommand(input);
+    const totalDurationSec = input.segmentEndSec - input.segmentStartSec;
+
+    await new Promise<void>((resolve, reject) => {
+      let proc;
+      try {
+        proc = spawn(ffmpegBin, args);
+      } catch (err) {
+        reject(err);
+        return;
+      }
+
+      let stderr = "";
+      let stdoutBuffer = "";
+      let lastReportedPercent = -1;
+
+      proc.stdout.on("data", (chunk: Buffer) => {
+        stdoutBuffer += chunk.toString();
+        const lines = stdoutBuffer.split("\n");
+        stdoutBuffer = lines.pop() ?? "";
+        for (const line of lines) {
+          const match = line.match(/^out_time=(\d+):(\d+):(\d+\.\d+)$/);
+          if (match && onProgress) {
+            const seconds = Number(match[1]) * 3600 + Number(match[2]) * 60 + Number(match[3]);
+            const percent =
+              totalDurationSec > 0 ? Math.min(100, Math.floor((seconds / totalDurationSec) * 100)) : 0;
+            if (percent !== lastReportedPercent) {
+              lastReportedPercent = percent;
+              onProgress(percent);
+            }
+          }
+        }
+      });
+      proc.stderr.on("data", (chunk: Buffer) => (stderr += chunk.toString()));
+      proc.on("error", reject);
+      proc.on("close", (code) => {
+        if (code === 0) {
+          resolve();
+        } else {
+          reject(new Error(`ffmpeg exited with code ${code}: ${stderr.slice(0, 500)}`));
+        }
+      });
+    });
   }
 
   async getStatus(): Promise<FfmpegStatus> {

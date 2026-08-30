@@ -8,6 +8,13 @@ const WATERMARK_POSITION_EXPRESSIONS: Record<RenderWatermarkPosition, string> = 
   "bottom-right": "x=main_w-overlay_w-24:y=main_h-overlay_h-24",
 };
 
+// ffmpeg's fontconfig can fail to resolve the default "Sans" font on machines
+// with no fontconfig config file (observed on Windows: "Fontconfig error:
+// Cannot load default config file"), which crashes drawtext entirely. Point
+// it at a font file that is guaranteed to exist instead. Forward slashes and
+// an escaped drive-letter colon are required by ffmpeg's filtergraph parser.
+const CAPTION_FONT_FILE = "C\\:/Windows/Fonts/arial.ttf";
+
 function escapeDrawtext(text: string): string {
   return text
     .replace(/\\/g, "\\\\")
@@ -63,7 +70,8 @@ export function buildRenderCommand(input: RenderInput): string[] {
     const nextLabel = `vcap${i}`;
     const text = escapeDrawtext(caption.text);
     filters.push(
-      `[${videoLabel}]drawtext=text='${text}':enable='between(t\\,${caption.start}\\,${caption.end})':` +
+      `[${videoLabel}]drawtext=fontfile='${CAPTION_FONT_FILE}':text='${text}':` +
+        `enable='between(t\\,${caption.start}\\,${caption.end})':` +
         `fontcolor=white:fontsize=48:box=1:boxcolor=black@0.6:boxborderw=16:` +
         `x=(w-text_w)/2:y=h-160:expansion=none[${nextLabel}]`
     );
@@ -74,7 +82,12 @@ export function buildRenderCommand(input: RenderInput): string[] {
     const watermarkIndex = args.filter((arg) => arg === "-i").length;
     args.push("-loop", "1", "-i", input.watermark.filePath);
     const position = WATERMARK_POSITION_EXPRESSIONS[input.watermark.position];
-    filters.push(`[${videoLabel}][${watermarkIndex}:v]overlay=${position}[vwatermarked]`);
+    // The watermark image is looped indefinitely (-loop 1) so it stays on
+    // screen for the whole clip. Without shortest=1, overlay's default
+    // eof_action=repeat means the filtergraph never observes an EOF on the
+    // main branch either, and ffmpeg keeps duplicating frames forever
+    // instead of stopping when the clip ends.
+    filters.push(`[${videoLabel}][${watermarkIndex}:v]overlay=shortest=1:${position}[vwatermarked]`);
     videoLabel = "vwatermarked";
   }
 

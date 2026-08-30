@@ -145,3 +145,102 @@ describe("FFmpegProcessor.detectSceneChanges", () => {
     expect(changes[0]).toBeLessThan(3);
   });
 });
+
+describe("FFmpegProcessor.renderClip", () => {
+  it("produces a real 9:16 output file matching the target resolution and duration", async () => {
+    // testVideoPath (from the top-level beforeAll) is 320x240, 2s, 30fps,
+    // with both a video and an audio track.
+    const outputPath = path.join(workDir, "render-plain.mp4");
+    const processor = new FFmpegProcessor();
+    const progressUpdates: number[] = [];
+
+    await processor.renderClip(
+      {
+        sourcePath: testVideoPath,
+        sourceWidth: 320,
+        sourceHeight: 240,
+        outputPath,
+        segmentStartSec: 0,
+        segmentEndSec: 1.5,
+        targetWidth: 180,
+        targetHeight: 320,
+        fps: 30,
+        captions: null,
+        zooms: null,
+        sfx: null,
+        music: null,
+        watermark: null,
+      },
+      (percent) => progressUpdates.push(percent)
+    );
+
+    const stats = await stat(outputPath);
+    expect(stats.size).toBeGreaterThan(0);
+
+    const metadata = await processor.probe(outputPath);
+    expect(metadata.width).toBe(180);
+    expect(metadata.height).toBe(320);
+    expect(metadata.durationSec).toBeGreaterThanOrEqual(1);
+    expect(metadata.durationSec).toBeLessThanOrEqual(2);
+    expect(progressUpdates.length).toBeGreaterThan(0);
+    expect(progressUpdates[progressUpdates.length - 1]).toBeGreaterThan(0);
+  }, 30000);
+
+  it("burns in a caption, applies a zoom point, and overlays a watermark on a real render", async () => {
+    const watermarkPath = path.join(workDir, "logo.png");
+    await execFileAsync("ffmpeg", [
+      "-f", "lavfi", "-i", "color=c=red:size=40x40:duration=1",
+      "-frames:v", "1", "-y", watermarkPath,
+    ]);
+
+    const outputPath = path.join(workDir, "render-full.mp4");
+    const processor = new FFmpegProcessor();
+
+    await processor.renderClip({
+      sourcePath: testVideoPath,
+      sourceWidth: 320,
+      sourceHeight: 240,
+      outputPath,
+      segmentStartSec: 0,
+      segmentEndSec: 2,
+      targetWidth: 180,
+      targetHeight: 320,
+      fps: 30,
+      captions: [{ start: 0, end: 1, text: "Teste" }],
+      zooms: [{ time: 1, scale: 1.5 }],
+      sfx: null,
+      music: null,
+      watermark: { filePath: watermarkPath, position: "bottom-right" },
+    });
+
+    const stats = await stat(outputPath);
+    expect(stats.size).toBeGreaterThan(0);
+
+    const metadata = await processor.probe(outputPath);
+    expect(metadata.width).toBe(180);
+    expect(metadata.height).toBe(320);
+  }, 30000);
+
+  it("rejects with a real ffmpeg error message when the source file doesn't exist", async () => {
+    const processor = new FFmpegProcessor();
+
+    await expect(
+      processor.renderClip({
+        sourcePath: path.join(workDir, "does-not-exist.mp4"),
+        sourceWidth: 320,
+        sourceHeight: 240,
+        outputPath: path.join(workDir, "should-not-exist.mp4"),
+        segmentStartSec: 0,
+        segmentEndSec: 1,
+        targetWidth: 180,
+        targetHeight: 320,
+        fps: 30,
+        captions: null,
+        zooms: null,
+        sfx: null,
+        music: null,
+        watermark: null,
+      })
+    ).rejects.toThrow(/ffmpeg exited with code/);
+  }, 30000);
+});

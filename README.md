@@ -10,10 +10,11 @@ real de metadados/thumbnail via FFmpeg, através de um Job e worker reais;
 e a **Fase 4 (Pipeline de IA)**: transcrição real via whisper.cpp, análise
 heurística de áudio/vídeo, detecção de clipes candidatos e rascunho
 automático de plano de edição, com tela de revisão para aprovar/rejeitar
-cada clipe; e a **Fase 5A (Editor manual)**: ajuste de corte, legendas,
+cada clipe; a **Fase 5A (Editor manual)**: ajuste de corte, legendas,
 zoom, SFX, música e marca d'água por clipe aprovado, com prévia real
-(vídeo + overlays CSS). Render de fato do vídeo final (Fase 5B) é a
-próxima etapa — ver `docs/superpowers/specs/`.
+(vídeo + overlays CSS); e a **Fase 5B (Render)**: renderização real do
+vídeo final (queima de legenda, zoom, mixagem de áudio, watermark) via
+FFmpeg, através de um segundo loop de polling no worker.
 
 ## Requisitos
 
@@ -178,8 +179,8 @@ sufixo `.en`) — o produto é para streamers em português.
 Depois que o worker processa um VOD, os clipes detectados aparecem na tela
 **Clipes** do app (selecione o VOD na lista), onde dá para aprovar ou
 rejeitar cada um. Edição de fato (zoom, SFX, música, ajuste de legendas) —
-ver seção "Editor manual de clipes (Fase 5A)" abaixo — e render (Fase 5B)
-completam o restante do fluxo.
+ver seção "Editor manual de clipes (Fase 5A)" abaixo — e render (ver seção
+"Render de clipes (Fase 5B)" abaixo) completam o restante do fluxo.
 
 ## Editor manual de clipes (Fase 5A)
 
@@ -195,8 +196,22 @@ local + posição em um dos 4 cantos).
 
 As alterações só são salvas ao clicar em **Salvar alterações** — nada é
 persistido automaticamente. Render de fato do vídeo final (queima de
-legenda, zoom, mixagem de áudio, watermark) é a Fase 5B, ainda não
-implementada.
+legenda, zoom, mixagem de áudio, watermark) é a Fase 5B — ver seção
+"Render de clipes (Fase 5B)" abaixo.
+
+## Render de clipes (Fase 5B)
+
+Na tela do editor, o botão **Renderizar** dispara a renderização final do
+clipe: queima de legenda, zoom, mixagem de áudio (SFX + música) e
+watermark, tudo via FFmpeg. A renderização roda de forma assíncrona — o
+worker (o mesmo processo das Fases 3/4) tem um segundo loop de polling,
+independente do loop de jobs/ingestão, dedicado a processar renders
+pendentes. Enquanto o render está em andamento, o editor mostra uma barra
+de progresso; se falhar, a mensagem de erro aparece na tela.
+
+Quando o render termina, o botão **Abrir arquivo** aparece tanto na tela
+do editor quanto no card do clipe na tela **Clipes**, e abre o arquivo
+final no explorador de arquivos do Windows.
 
 ## Notas técnicas relevantes
 
@@ -228,8 +243,12 @@ de revisão (aprovar/rejeitar).
 
 **Fase 5A (Editor manual)** está implementada: ajuste de corte, legendas,
 zoom, SFX, música e marca d'água por clipe aprovado, com prévia real
-(vídeo + overlays CSS). Render do vídeo final continua sendo Fase 5B.
+(vídeo + overlays CSS).
 
-- Render do vídeo final, export — Fase 5B
+**Fase 5B (Render)** está implementada: renderização real do vídeo final
+(queima de legenda, zoom, mixagem de áudio, watermark) via FFmpeg, através
+de um segundo loop de polling no worker, com progresso exibido no editor e
+abertura do arquivo final via "Abrir arquivo" (editor e tela de Clipes).
+
 - Device-lock / limite de dispositivos por key, renovação de key — schema
   preparado, sem endpoint ainda

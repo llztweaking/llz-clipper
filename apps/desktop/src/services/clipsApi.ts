@@ -12,3 +12,7 @@ export function getClip(id: string): Promise<Clip> {
 export function updateClipStatus(id: string, status: ClipStatus): Promise<Clip> {
   return authedRequest(`/clips/${id}`, { method: "PATCH", body: { status } });
 }
+
+export function renderClip(id: string): Promise<{ renderId: string }> {
+  return authedRequest(`/clips/${id}/render`, { method: "POST" });
+}

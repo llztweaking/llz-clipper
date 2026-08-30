@@ -130,6 +130,19 @@ export type ClipCategory =
 
 export type ClipStatus = "DETECTED" | "READY" | "APPROVED" | "REJECTED" | "RENDERING" | "COMPLETED" | "FAILED";
 
+export type RenderStatus = "QUEUED" | "RENDERING" | "COMPLETED" | "FAILED";
+
+export interface Render {
+  id: string;
+  clipId: string;
+  status: RenderStatus;
+  progress: number;
+  outputPath: string | null;
+  error: string | null;
+  createdAt: string;
+  finishedAt: string | null;
+}
+
 export interface Clip {
   id: string;
   vodId: string;
@@ -142,6 +155,7 @@ export interface Clip {
   status: ClipStatus;
   createdAt: string;
   editPlan?: EditPlan;
+  latestRender?: Render | null;
 }
 
 export interface EditPlanSegment {

@@ -18,12 +18,21 @@ export class LocalStorageService implements StorageService {
     return path.join(this.root, "thumbnails");
   }
 
+  private get rendersDir(): string {
+    return path.join(this.root, "renders");
+  }
+
   private getVodPath(vodId: string, extension: string): string {
     return path.join(this.vodsDir, `${vodId}${extension}`);
   }
 
   getThumbnailPath(vodId: string): string {
     return path.join(this.thumbnailsDir, `${vodId}.jpg`);
+  }
+
+  async prepareRenderOutput(clipId: string, renderId: string): Promise<string> {
+    await mkdir(this.rendersDir, { recursive: true });
+    return path.join(this.rendersDir, `${clipId}-${renderId}.mp4`);
   }
 
   async copyIntoStorage(

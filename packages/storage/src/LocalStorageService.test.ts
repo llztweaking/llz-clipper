@@ -86,3 +86,15 @@ describe("LocalStorageService.deleteVod", () => {
     await expect(service.deleteVod("vod-del", ".mp4")).resolves.toBeUndefined();
   });
 });
+
+describe("LocalStorageService.prepareRenderOutput", () => {
+  it("creates the renders directory and returns the expected output path", async () => {
+    const service = new LocalStorageService(storageRoot);
+    const outputPath = await service.prepareRenderOutput("clip-1", "render-1");
+
+    expect(outputPath).toBe(path.join(storageRoot, "renders", "clip-1-render-1.mp4"));
+
+    const dirStat = await stat(path.dirname(outputPath));
+    expect(dirStat.isDirectory()).toBe(true);
+  });
+});

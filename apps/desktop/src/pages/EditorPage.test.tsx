@@ -6,11 +6,13 @@ import { EditorPage } from "./EditorPage";
 import * as clipsApi from "../services/clipsApi";
 import * as editPlansApi from "../services/editPlansApi";
 import * as vodsApi from "../services/vodsApi";
+import { revealItemInDir } from "@tauri-apps/plugin-opener";
 
 vi.mock("../services/clipsApi");
 vi.mock("../services/editPlansApi");
 vi.mock("../services/vodsApi");
 vi.mock("@tauri-apps/plugin-dialog", () => ({ open: vi.fn() }));
+vi.mock("@tauri-apps/plugin-opener", () => ({ revealItemInDir: vi.fn() }));
 
 const sampleEditPlan = {
   id: "ep1",
@@ -40,6 +42,7 @@ const sampleClip = {
   status: "APPROVED" as const,
   createdAt: "2026-01-01T00:00:00.000Z",
   editPlan: sampleEditPlan,
+  latestRender: null,
 };
 
 const sampleVod = {
@@ -134,5 +137,54 @@ describe("EditorPage", () => {
     renderEditorPage();
 
     expect(await screen.findByText("Clipe não encontrado.")).toBeInTheDocument();
+  });
+
+  it("shows a Renderizar button for an APPROVED clip and starts a render when clicked", async () => {
+    vi.mocked(clipsApi.renderClip).mockResolvedValue({ renderId: "r1" });
+    const user = userEvent.setup();
+    renderEditorPage();
+    await screen.findByDisplayValue("Clipe de teste");
+
+    await user.click(screen.getByRole("button", { name: "Renderizar" }));
+
+    expect(clipsApi.renderClip).toHaveBeenCalledWith("c1");
+  });
+
+  it("shows render progress while the latest render is RENDERING", async () => {
+    vi.mocked(clipsApi.getClip).mockResolvedValue({
+      ...sampleClip,
+      status: "RENDERING",
+      latestRender: { id: "r1", clipId: "c1", status: "RENDERING", progress: 42, outputPath: null, error: null, createdAt: "2026-01-01T00:00:00.000Z", finishedAt: null },
+    });
+    renderEditorPage();
+
+    expect(await screen.findByText(/42%/)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Renderizar" })).not.toBeInTheDocument();
+  });
+
+  it("shows Abrir arquivo when the latest render is COMPLETED, and opens it", async () => {
+    vi.mocked(clipsApi.getClip).mockResolvedValue({
+      ...sampleClip,
+      status: "COMPLETED",
+      latestRender: { id: "r1", clipId: "c1", status: "COMPLETED", progress: 100, outputPath: "C:\\storage\\renders\\c1-r1.mp4", error: null, createdAt: "2026-01-01T00:00:00.000Z", finishedAt: "2026-01-01T00:01:00.000Z" },
+    });
+    const user = userEvent.setup();
+    renderEditorPage();
+    await screen.findByText("Renderização concluída");
+
+    await user.click(screen.getByRole("button", { name: "Abrir arquivo" }));
+
+    expect(revealItemInDir).toHaveBeenCalledWith("C:\\storage\\renders\\c1-r1.mp4");
+  });
+
+  it("shows the render error and still offers Renderizar again when the latest render FAILED", async () => {
+    vi.mocked(clipsApi.getClip).mockResolvedValue({
+      ...sampleClip,
+      latestRender: { id: "r1", clipId: "c1", status: "FAILED", progress: 0, outputPath: null, error: "ffmpeg explodiu", createdAt: "2026-01-01T00:00:00.000Z", finishedAt: "2026-01-01T00:01:00.000Z" },
+    });
+    renderEditorPage();
+
+    expect(await screen.findByText("ffmpeg explodiu")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Renderizar" })).toBeInTheDocument();
   });
 });

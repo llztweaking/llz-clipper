@@ -16,6 +16,7 @@ export function registerClipRoutes(app: FastifyInstance): void {
 
     const clips = await prisma.clip.findMany({
       where: { vodId },
+      include: { renders: { orderBy: { createdAt: "desc" }, take: 1 } },
       orderBy: { startTime: "asc" },
     });
 
@@ -31,6 +32,7 @@ export function registerClipRoutes(app: FastifyInstance): void {
         scoreReason: clip.scoreReason,
         status: clip.status,
         createdAt: clip.createdAt,
+        latestRender: clip.renders[0] ?? null,
       }))
     );
   });
@@ -39,7 +41,7 @@ export function registerClipRoutes(app: FastifyInstance): void {
     const { id } = request.params as { id: string };
     const clip = await prisma.clip.findFirst({
       where: { id, vod: { streamer: { userId: request.authUser!.id } } },
-      include: { editPlan: true },
+      include: { editPlan: true, renders: { orderBy: { createdAt: "desc" }, take: 1 } },
     });
     if (!clip) return reply.code(404).send({ error: "not_found", message: "Clipe não encontrado" });
 
@@ -55,6 +57,7 @@ export function registerClipRoutes(app: FastifyInstance): void {
       status: clip.status,
       createdAt: clip.createdAt,
       editPlan: clip.editPlan,
+      latestRender: clip.renders[0] ?? null,
     });
   });
 

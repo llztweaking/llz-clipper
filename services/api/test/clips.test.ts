@@ -57,6 +57,22 @@ describe("GET /vods/:vodId/clips", () => {
     expect(body[0].score).toBe(80);
   });
 
+  it("includes latestRender on each clip returned by GET /vods/:vodId/clips", async () => {
+    const { token, user } = await createAuthenticatedUser("USER");
+    const { vod, clip } = await createVodWithClip(user.id, { status: "APPROVED" });
+    const latest = await prisma.render.create({ data: { clipId: clip.id, status: "RENDERING", progress: 40 } });
+
+    const response = await app.inject({
+      method: "GET",
+      url: `/vods/${vod.id}/clips`,
+      headers: { authorization: `Bearer ${token}` },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()[0].latestRender.id).toBe(latest.id);
+    expect(response.json()[0].latestRender.progress).toBe(40);
+  });
+
   it("404s when listing clips for a VOD owned by another user", async () => {
     const { user: owner } = await createAuthenticatedUser("USER");
     const { vod } = await createVodWithClip(owner.id);
@@ -88,6 +104,36 @@ describe("GET /clips/:id", () => {
     expect(body.id).toBe(clip.id);
     expect(body.editPlan).toBeTruthy();
     expect(body.editPlan.title).toBe("Clipe de teste");
+  });
+
+  it("includes the most recent render as latestRender on GET /clips/:id", async () => {
+    const { token, user } = await createAuthenticatedUser("USER");
+    const { clip } = await createVodWithClip(user.id, { status: "APPROVED" });
+    await prisma.render.create({ data: { clipId: clip.id, status: "FAILED", error: "antigo" } });
+    const latest = await prisma.render.create({ data: { clipId: clip.id, status: "COMPLETED", progress: 100, outputPath: "/x.mp4" } });
+
+    const response = await app.inject({
+      method: "GET",
+      url: `/clips/${clip.id}`,
+      headers: { authorization: `Bearer ${token}` },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json().latestRender.id).toBe(latest.id);
+    expect(response.json().latestRender.status).toBe("COMPLETED");
+  });
+
+  it("returns latestRender: null on GET /clips/:id when the clip has never been rendered", async () => {
+    const { token, user } = await createAuthenticatedUser("USER");
+    const { clip } = await createVodWithClip(user.id, { status: "APPROVED" });
+
+    const response = await app.inject({
+      method: "GET",
+      url: `/clips/${clip.id}`,
+      headers: { authorization: `Bearer ${token}` },
+    });
+
+    expect(response.json().latestRender).toBeNull();
   });
 
   it("404s getting a clip owned by another user", async () => {

@@ -12,8 +12,7 @@ function escapeDrawtext(text: string): string {
   return text
     .replace(/\\/g, "\\\\")
     .replace(/:/g, "\\:")
-    .replace(/'/g, "’")
-    .replace(/%/g, "\\%");
+    .replace(/'/g, "’");
 }
 
 export function buildRenderCommand(input: RenderInput): string[] {
@@ -66,7 +65,7 @@ export function buildRenderCommand(input: RenderInput): string[] {
     filters.push(
       `[${videoLabel}]drawtext=text='${text}':enable='between(t\\,${caption.start}\\,${caption.end})':` +
         `fontcolor=white:fontsize=48:box=1:boxcolor=black@0.6:boxborderw=16:` +
-        `x=(w-text_w)/2:y=h-160[${nextLabel}]`
+        `x=(w-text_w)/2:y=h-160:expansion=none[${nextLabel}]`
     );
     videoLabel = nextLabel;
   });

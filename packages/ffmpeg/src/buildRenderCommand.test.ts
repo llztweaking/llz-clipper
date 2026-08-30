@@ -79,6 +79,17 @@ describe("buildRenderCommand", () => {
     expect(joined).toContain("Ex\\: it\u2019s \\\\ done");
   });
 
+  it("sets expansion=none on drawtext and leaves a literal % unescaped in the caption text", () => {
+    const args = buildRenderCommand({
+      ...baseInput,
+      captions: [{ start: 0, end: 2, text: "50% off" }],
+    });
+    const joined = args.join(" ");
+
+    expect(joined).toContain("expansion=none");
+    expect(joined).toContain("text='50% off'");
+  });
+
   it("adds a looped, volume-adjusted, duration-trimmed music input and mixes it with the original audio", () => {
     const args = buildRenderCommand({
       ...baseInput,

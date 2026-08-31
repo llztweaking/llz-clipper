@@ -131,6 +131,13 @@ nestes casos, em qualquer tela:
    borda, que exigiria `border-image` e complica com `border-radius`)
    junto com `--glow-sm`. O efeito visual de "acender" é o mesmo; só a
    borda em si não é multi-cor.
+5. O título `<h1>` da tela de login (`.login-page h1`) — um `text-shadow`
+   sutil com `--glow-sm`. É o único texto de marca que existe fora da
+   sidebar, na primeira tela que o usuário vê antes mesmo de autenticar;
+   confirmado visualmente durante a implementação como um efeito sutil e
+   intencional, não um vazamento da regra — mas só foi documentado aqui
+   depois (a implementação já tinha esse `text-shadow` desde a Fase 4 do
+   plano; esta seção não o listava explicitamente até a revisão final).
 
 Em qualquer outro elemento — cards em repouso, texto padrão, bordas de
 tabela, botões secundários — a superfície usa só `--surface`/`--border`/

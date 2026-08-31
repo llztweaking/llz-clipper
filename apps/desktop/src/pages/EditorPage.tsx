@@ -138,7 +138,7 @@ export function EditorPage() {
 
       {error && <p className="form-error">{error}</p>}
 
-      <button onClick={() => void handleSave()} disabled={saving || fieldsDisabled}>
+      <button className="btn-primary" onClick={() => void handleSave()} disabled={saving || fieldsDisabled}>
         {saving ? "Salvando…" : "Salvar alterações"}
       </button>
 
@@ -164,7 +164,7 @@ export function EditorPage() {
         )}
 
         {canRender && (
-          <button onClick={() => void handleRender()} disabled={rendering}>
+          <button className="btn-primary" onClick={() => void handleRender()} disabled={rendering}>
             {rendering ? "Iniciando…" : "Renderizar"}
           </button>
         )}

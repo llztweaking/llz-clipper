@@ -43,7 +43,7 @@ export function StreamerForm({ streamer, onSave, onCancel }: StreamerFormProps) 
           <button type="button" onClick={onCancel}>
             Cancelar
           </button>
-          <button type="submit" disabled={saving}>
+          <button type="submit" className="btn-primary" disabled={saving}>
             {saving ? "Salvando…" : "Salvar"}
           </button>
         </div>

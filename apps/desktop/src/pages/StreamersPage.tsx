@@ -38,7 +38,7 @@ export function StreamersPage() {
     <div className="streamers-page">
       <div className="page-header">
         <h1>Streamers</h1>
-        <button onClick={openCreate}>+ Novo Streamer</button>
+        <button className="btn-primary" onClick={openCreate}>+ Novo Streamer</button>
       </div>
       {loading ? (
         <p>Carregando…</p>

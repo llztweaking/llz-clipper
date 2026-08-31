@@ -1,9 +1,50 @@
 :root {
-  --bg: #0d0d0f;
-  --surface: #17171a;
-  --border: #2a2a2e;
-  --text: #f2f2f3;
-  --text-muted: #9a9aa0;
-  --accent: #5b8cff;
-  --danger: #e5555f;
+  /* Cores base */
+  --bg: #0c0c10;
+  --surface: #151519;
+  --surface-raised: #1a1a20;
+  --border: #232329;
+  --border-accent: #5a2fa3;
+  --text: #f2f2f5;
+  --text-muted: #9a9aa4;
+
+  /* Acento (gradiente de marca) */
+  --accent-start: #ff2ec4;
+  --accent-mid: #7c3bff;
+  --accent-end: #3b8bff;
+  --accent-gradient: linear-gradient(90deg, var(--accent-start), var(--accent-mid), var(--accent-end));
+
+  /* Semântico */
+  --danger: #ff4d6a;
+  --success: #3ddc84;
+
+  /* Glow (só em elementos de destaque — ver Global Constraints) */
+  --glow-sm: 0 0 12px -2px rgba(255, 46, 196, 0.6);
+  --glow-md: 0 0 24px -4px rgba(255, 46, 196, 0.55), 0 0 24px -4px rgba(59, 139, 255, 0.4);
+
+  /* Tipografia */
+  --font-size-xs: 12px;
+  --font-size-sm: 13px;
+  --font-size-base: 14px;
+  --font-size-lg: 16px;
+  --font-size-xl: 20px;
+  --font-size-2xl: 28px;
+  --font-weight-regular: 400;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+  --font-weight-extrabold: 800;
+
+  /* Espaçamento (grade de 4px) */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+
+  /* Raios */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
 }

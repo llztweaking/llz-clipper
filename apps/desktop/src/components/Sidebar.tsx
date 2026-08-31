@@ -1,12 +1,13 @@
 import { NavLink } from "react-router-dom";
+import { Video, Flame, Film, Users, Settings, Shield } from "lucide-react";
 import { useAuthStore } from "../stores/authStore";
 
 const NAV_ITEMS = [
-  { to: "/vod", label: "VOD", icon: "🎥" },
-  { to: "/clips", label: "CLIPS", icon: "🔥" },
-  { to: "/editor", label: "EDITOR", icon: "🎬" },
-  { to: "/streamers", label: "STREAMERS", icon: "👤" },
-  { to: "/settings", label: "CONFIGURAÇÕES", icon: "⚙️" },
+  { to: "/vod", label: "VOD", Icon: Video },
+  { to: "/clips", label: "CLIPS", Icon: Flame },
+  { to: "/editor", label: "EDITOR", Icon: Film },
+  { to: "/streamers", label: "STREAMERS", Icon: Users },
+  { to: "/settings", label: "CONFIGURAÇÕES", Icon: Settings },
 ];
 
 export function Sidebar() {
@@ -21,12 +22,12 @@ export function Sidebar() {
           to={item.to}
           className={({ isActive }) => `sidebar-link${isActive ? " active" : ""}`}
         >
-          <span>{item.icon}</span> {item.label}
+          <item.Icon size={18} aria-label={item.label} /> {item.label}
         </NavLink>
       ))}
       {role === "ADMIN" && (
         <NavLink to="/admin" className={({ isActive }) => `sidebar-link${isActive ? " active" : ""}`}>
-          <span>🛠</span> ADMIN
+          <Shield size={18} aria-label="ADMIN" /> ADMIN
         </NavLink>
       )}
     </nav>

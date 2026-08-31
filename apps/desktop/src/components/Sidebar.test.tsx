@@ -35,4 +35,13 @@ describe("Sidebar", () => {
     renderSidebar();
     expect(screen.getByText("ADMIN")).toBeInTheDocument();
   });
+
+  it("renders an icon (not emoji) for each nav item", () => {
+    renderSidebar();
+    expect(screen.getByLabelText("VOD")).toBeInTheDocument();
+    expect(screen.getByLabelText("CLIPS")).toBeInTheDocument();
+    expect(screen.getByLabelText("EDITOR")).toBeInTheDocument();
+    expect(screen.getByLabelText("STREAMERS")).toBeInTheDocument();
+    expect(screen.getByLabelText("CONFIGURAÇÕES")).toBeInTheDocument();
+  });
 });

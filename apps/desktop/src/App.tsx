@@ -52,7 +52,11 @@ function App() {
   }, [setSession]);
 
   if (bootstrapping) {
-    return <div className="app-loading">Carregando…</div>;
+    return (
+      <div className="app-loading">
+        <div className="skeleton-line" style={{ width: "120px" }} role="status" aria-label="Carregando" />
+      </div>
+    );
   }
 
   return (

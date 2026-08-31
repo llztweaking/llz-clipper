@@ -65,7 +65,7 @@ export function VodPage() {
       </form>
 
       {loading ? (
-        <p>Carregando…</p>
+        <div className="skeleton-line" style={{ width: "120px" }} role="status" aria-label="Carregando" />
       ) : (
         <div className="vod-grid">
           {vods.map((vod) => (

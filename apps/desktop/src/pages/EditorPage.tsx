@@ -91,7 +91,9 @@ export function EditorPage() {
     }
   }
 
-  if (loading) return <p>Carregando…</p>;
+  if (loading) {
+    return <div className="skeleton-line" style={{ width: "120px" }} role="status" aria-label="Carregando" />;
+  }
   if (!vodId || !draft || !clip) return <p>Clipe não encontrado.</p>;
 
   const isActiveRender = ACTIVE_RENDER_STATUSES.has(clip.latestRender?.status ?? "");

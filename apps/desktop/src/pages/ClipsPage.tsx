@@ -26,7 +26,7 @@ export function ClipsPage() {
       {!selectedVodId ? (
         <p>Selecione um VOD para ver os clipes detectados.</p>
       ) : loading ? (
-        <p>Carregando…</p>
+        <div className="skeleton-line" style={{ width: "120px" }} role="status" aria-label="Carregando" />
       ) : clips.length === 0 ? (
         <p>Nenhum clipe detectado para este VOD.</p>
       ) : (

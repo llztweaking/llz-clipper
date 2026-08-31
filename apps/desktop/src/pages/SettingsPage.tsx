@@ -54,7 +54,9 @@ export function SettingsPage() {
       </div>
       {tab === "account" ? (
         loading ? (
-          <div className="skeleton-line" style={{ width: "120px" }} role="status" aria-label="Carregando" />
+          <div className="skeleton-line" style={{ width: "120px" }} role="status">
+            <span className="sr-only">Carregando…</span>
+          </div>
         ) : me ? (
           <div className="settings-panel">
             <p>Email: {me.user.email}</p>
@@ -72,7 +74,9 @@ export function SettingsPage() {
         )
       ) : tab === "processing" ? (
         processingLoading ? (
-          <div className="skeleton-line" style={{ width: "120px" }} role="status" aria-label="Carregando" />
+          <div className="skeleton-line" style={{ width: "120px" }} role="status">
+            <span className="sr-only">Carregando…</span>
+          </div>
         ) : ffmpegStatus?.available ? (
           <p>FFmpeg encontrado — versão {ffmpegStatus.version}</p>
         ) : (

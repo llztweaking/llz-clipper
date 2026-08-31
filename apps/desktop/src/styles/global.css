@@ -727,3 +727,43 @@ select:focus {
     background-position: 0% 50%;
   }
 }
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  h1::before,
+  h1::after,
+  .btn-primary,
+  .skeleton-line {
+    animation: none;
+  }
+
+  .streamer-card,
+  .vod-card,
+  .clip-card,
+  .caption-editor,
+  .zoom-editor,
+  .sfx-editor,
+  .music-picker,
+  .watermark-picker,
+  .streamer-card::before,
+  .vod-card::before,
+  .clip-card::before,
+  .caption-editor::before,
+  .zoom-editor::before,
+  .sfx-editor::before,
+  .music-picker::before,
+  .watermark-picker::before {
+    transition: none;
+  }
+}

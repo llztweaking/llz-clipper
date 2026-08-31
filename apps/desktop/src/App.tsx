@@ -54,7 +54,9 @@ function App() {
   if (bootstrapping) {
     return (
       <div className="app-loading">
-        <div className="skeleton-line" style={{ width: "120px" }} role="status" aria-label="Carregando" />
+        <div className="skeleton-line" style={{ width: "120px" }} role="status">
+          <span className="sr-only">Carregando…</span>
+        </div>
       </div>
     );
   }

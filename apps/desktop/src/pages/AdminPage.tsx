@@ -102,7 +102,9 @@ export function AdminPage() {
         <option value="REVOKED">REVOKED</option>
       </select>
       {loading ? (
-        <div className="skeleton-line" style={{ width: "120px" }} role="status" aria-label="Carregando" />
+        <div className="skeleton-line" style={{ width: "120px" }} role="status">
+          <span className="sr-only">Carregando…</span>
+        </div>
       ) : (
         <>
           <KeyTable keys={keys} onRevoke={handleRevoke} revokingId={revokingId} />

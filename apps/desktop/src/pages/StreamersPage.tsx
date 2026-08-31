@@ -41,7 +41,9 @@ export function StreamersPage() {
         <button className="btn-primary" onClick={openCreate}>+ Novo Streamer</button>
       </div>
       {loading ? (
-        <div className="skeleton-line" style={{ width: "120px" }} role="status" aria-label="Carregando" />
+        <div className="skeleton-line" style={{ width: "120px" }} role="status">
+          <span className="sr-only">Carregando…</span>
+        </div>
       ) : (
         <div className="streamer-grid">
           {streamers.map((streamer) => (

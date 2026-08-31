@@ -92,7 +92,11 @@ export function EditorPage() {
   }
 
   if (loading) {
-    return <div className="skeleton-line" style={{ width: "120px" }} role="status" aria-label="Carregando" />;
+    return (
+      <div className="skeleton-line" style={{ width: "120px" }} role="status">
+        <span className="sr-only">Carregando…</span>
+      </div>
+    );
   }
   if (!vodId || !draft || !clip) return <p>Clipe não encontrado.</p>;
 

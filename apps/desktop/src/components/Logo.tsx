@@ -4,7 +4,7 @@ interface LogoProps {
 
 export function Logo({ size = "sm" }: LogoProps) {
   const iconSize = size === "lg" ? 40 : 22;
-  const fontSize = size === "lg" ? 28 : 16;
+  const fontSize = size === "lg" ? "var(--font-size-2xl)" : "var(--font-size-lg)";
   const gradientId = `logo-gradient-${size}`;
 
   return (
@@ -12,9 +12,9 @@ export function Logo({ size = "sm" }: LogoProps) {
       <svg width={iconSize} height={iconSize} viewBox="0 0 40 40" aria-hidden="true">
         <defs>
           <linearGradient id={gradientId} x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#ff2ec4" />
-            <stop offset="50%" stopColor="#7c3bff" />
-            <stop offset="100%" stopColor="#3b8bff" />
+            <stop offset="0%" style={{ stopColor: "var(--accent-start)" }} />
+            <stop offset="50%" style={{ stopColor: "var(--accent-mid)" }} />
+            <stop offset="100%" style={{ stopColor: "var(--accent-end)" }} />
           </linearGradient>
         </defs>
         <path d="M8 6 L8 34 L32 20 Z" fill={`url(#${gradientId})`} />

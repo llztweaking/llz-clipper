@@ -493,7 +493,7 @@ select:focus {
 }
 
 .clip-status-rendering {
-  color: var(--accent-mid);
+  color: var(--accent-end);
   font-weight: var(--font-weight-semibold);
   margin: 0;
 }

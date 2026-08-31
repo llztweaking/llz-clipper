@@ -37,7 +37,7 @@ export function ClipCard({ clip, onApprove, onReject, onEdit }: ClipCardProps) {
 
       {clip.status === "DETECTED" && (
         <div className="clip-actions">
-          <button onClick={onApprove}>Aprovar</button>
+          <button className="btn-primary" onClick={onApprove}>Aprovar</button>
           <button onClick={onReject}>Rejeitar</button>
         </div>
       )}
@@ -49,7 +49,7 @@ export function ClipCard({ clip, onApprove, onReject, onEdit }: ClipCardProps) {
       )}
       {clip.status === "RENDERING" && (
         <div className="clip-actions">
-          <p>Renderizando… ({clip.latestRender?.progress ?? 0}%)</p>
+          <p className="clip-status-rendering">Renderizando… ({clip.latestRender?.progress ?? 0}%)</p>
         </div>
       )}
       {clip.status === "COMPLETED" && (

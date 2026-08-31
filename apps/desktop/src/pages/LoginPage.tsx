@@ -65,7 +65,7 @@ export function LoginPage() {
           required
         />
         {error && <p className="form-error">{error}</p>}
-        <button type="submit" disabled={loading}>
+        <button type="submit" className="btn-primary" disabled={loading}>
           {loading ? "Aguarde…" : mode === "activate" ? "Ativar acesso" : "Entrar"}
         </button>
       </form>

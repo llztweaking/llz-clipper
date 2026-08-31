@@ -590,3 +590,22 @@ select:focus {
   font-size: var(--font-size-xs);
   margin: 0;
 }
+
+.app-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.app-logo-text {
+  font-weight: var(--font-weight-extrabold);
+  letter-spacing: 0.3px;
+  color: var(--text);
+}
+
+.app-logo-text-accent {
+  background: var(--accent-gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}

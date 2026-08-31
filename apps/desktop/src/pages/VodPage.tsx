@@ -59,7 +59,7 @@ export function VodPage() {
           ))}
         </select>
         {error && <p className="form-error">{error}</p>}
-        <button type="submit" disabled={!sourcePath || !streamerId || creating}>
+        <button type="submit" className="btn-primary" disabled={!sourcePath || !streamerId || creating}>
           {creating ? "Adicionando…" : "Adicionar VOD"}
         </button>
       </form>

@@ -7,7 +7,7 @@ export function SessionExpiredModal() {
     <div className="modal-overlay">
       <div className="modal">
         <h2>Sua sessão expirou</h2>
-        <button onClick={clearSessionExpired}>Voltar ao login</button>
+        <button className="btn-primary" onClick={clearSessionExpired}>Voltar ao login</button>
       </div>
     </div>
   );

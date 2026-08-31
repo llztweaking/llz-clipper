@@ -13,10 +13,46 @@ body {
 }
 
 h1 {
+  position: relative;
   font-size: var(--font-size-2xl);
   font-weight: var(--font-weight-extrabold);
   letter-spacing: 0.3px;
   margin: 0 0 var(--space-4);
+}
+
+h1::before,
+h1::after {
+  content: "";
+  position: absolute;
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+  z-index: -1;
+  pointer-events: none;
+  animation: h1-orb-float 3.5s ease-in-out infinite;
+}
+
+h1::before {
+  background: radial-gradient(circle, rgba(255, 46, 196, 0.35), transparent 70%);
+  top: -20px;
+  left: -10px;
+}
+
+h1::after {
+  background: radial-gradient(circle, rgba(59, 139, 255, 0.35), transparent 70%);
+  top: -20px;
+  left: 40px;
+  animation-delay: -1.5s;
+}
+
+@keyframes h1-orb-float {
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    transform: translateY(-14px) scale(1.15);
+  }
 }
 
 h2 {

@@ -1,6 +1,7 @@
 import { NavLink } from "react-router-dom";
 import { Video, Flame, Film, Users, Settings, Shield } from "lucide-react";
 import { useAuthStore } from "../stores/authStore";
+import { Logo } from "./Logo";
 
 const NAV_ITEMS = [
   { to: "/vod", label: "VOD", Icon: Video },
@@ -15,7 +16,9 @@ export function Sidebar() {
 
   return (
     <nav className="sidebar">
-      <div className="sidebar-title">LLZ CLIPPER</div>
+      <div className="sidebar-title">
+        <Logo />
+      </div>
       {NAV_ITEMS.map((item) => (
         <NavLink
           key={item.to}

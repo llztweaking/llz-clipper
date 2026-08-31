@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { useAuth } from "../hooks/useAuth";
 import { ApiError } from "../services/apiClient";
+import { Logo } from "../components/Logo";
 
 type Mode = "activate" | "login";
 
@@ -32,7 +33,9 @@ export function LoginPage() {
 
   return (
     <div className="login-page">
-      <h1>LLZ CLIPPER</h1>
+      <h1>
+        <Logo size="lg" />
+      </h1>
       <div className="login-toggle">
         <button type="button" onClick={() => setMode("activate")}>
           Ativar licença

@@ -53,13 +53,26 @@ button:disabled {
 
 .btn-primary {
   background: var(--accent-gradient);
+  background-size: 200% 100%;
   color: white;
   border: none;
   box-shadow: var(--glow-sm);
+  animation: btn-gradient-move 4s ease-in-out infinite alternate;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
 .btn-primary:hover:not(:disabled) {
   box-shadow: var(--glow-md);
+  transform: scale(1.05);
+}
+
+@keyframes btn-gradient-move {
+  0% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: 100% 50%;
+  }
 }
 
 input,

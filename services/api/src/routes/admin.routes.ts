@@ -1,7 +1,7 @@
 import { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { prisma } from "@llz-clipper/database";
-import { createKey, createKeysBulk, listKeys, revokeKey } from "../services/adminKeyService";
+import { createKey, createKeysBulk, listKeys, revokeKey, resetDeviceForKey } from "../services/adminKeyService";
 
 const planSchema = z.enum(["MONTHLY", "QUARTERLY"]);
 const createKeySchema = z.object({ plan: planSchema });
@@ -39,6 +39,14 @@ export function registerAdminRoutes(app: FastifyInstance): void {
     const existing = await prisma.licenseKey.findUnique({ where: { id } });
     if (!existing) return reply.code(404).send({ error: "key_not_found", message: "Key não encontrada" });
     const key = await revokeKey(id);
+    return reply.code(200).send(key);
+  });
+
+  app.post("/keys/:id/reset-device", async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const existing = await prisma.licenseKey.findUnique({ where: { id } });
+    if (!existing) return reply.code(404).send({ error: "key_not_found", message: "Key não encontrada" });
+    const key = await resetDeviceForKey(id);
     return reply.code(200).send(key);
   });
 

@@ -85,3 +85,66 @@ describe("POST /admin/keys/:id/revoke", () => {
     expect(response.statusCode).toBe(404);
   });
 });
+
+describe("POST /admin/keys/:id/reset-device", () => {
+  it("clears the device binding on an active key", async () => {
+    const owner = await prisma.user.create({ data: { email: `owner-${Date.now()}@example.com`, passwordHash: "x" } });
+    const device = await prisma.device.create({ data: { hwid: "hwid-reset-test", userId: owner.id } });
+    const key = await prisma.licenseKey.create({
+      data: { code: "LLZ-RSET-0001-0001", plan: "MONTHLY", status: "ACTIVE", deviceId: device.id },
+    });
+
+    const response = await app.inject({
+      method: "POST",
+      url: `/admin/keys/${key.id}/reset-device`,
+      headers: { authorization: `Bearer ${adminToken}` },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json().deviceId).toBeNull();
+
+    const updated = await prisma.licenseKey.findUnique({ where: { id: key.id } });
+    expect(updated?.deviceId).toBeNull();
+  });
+
+  it("returns 404 for a key that does not exist", async () => {
+    const response = await app.inject({
+      method: "POST",
+      url: "/admin/keys/00000000-0000-0000-0000-000000000000/reset-device",
+      headers: { authorization: `Bearer ${adminToken}` },
+    });
+    expect(response.statusCode).toBe(404);
+  });
+
+  it("actually unblocks a login from a different device after reset", async () => {
+    const key = await prisma.licenseKey.create({ data: { code: "LLZ-RSE2-0001-0001", plan: "MONTHLY" } });
+
+    const activateResponse = await app.inject({
+      method: "POST",
+      url: "/auth/activate-key",
+      payload: { code: key.code, email: "reset-e2e@example.com", password: "supersecret123", hwid: "old-machine" },
+    });
+    expect(activateResponse.statusCode).toBe(201);
+
+    const blockedResponse = await app.inject({
+      method: "POST",
+      url: "/auth/login",
+      payload: { email: "reset-e2e@example.com", password: "supersecret123", hwid: "new-machine" },
+    });
+    expect(blockedResponse.statusCode).toBe(403);
+
+    const resetResponse = await app.inject({
+      method: "POST",
+      url: `/admin/keys/${key.id}/reset-device`,
+      headers: { authorization: `Bearer ${adminToken}` },
+    });
+    expect(resetResponse.statusCode).toBe(200);
+
+    const unblockedResponse = await app.inject({
+      method: "POST",
+      url: "/auth/login",
+      payload: { email: "reset-e2e@example.com", password: "supersecret123", hwid: "new-machine" },
+    });
+    expect(unblockedResponse.statusCode).toBe(200);
+  });
+});

@@ -56,3 +56,7 @@ export async function listKeys(filters: ListKeysFilters) {
 export async function revokeKey(id: string) {
   return prisma.licenseKey.update({ where: { id }, data: { status: "REVOKED", revokedAt: new Date() } });
 }
+
+export async function resetDeviceForKey(id: string) {
+  return prisma.licenseKey.update({ where: { id }, data: { deviceId: null } });
+}

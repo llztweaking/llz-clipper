@@ -68,6 +68,25 @@ describe("POST /clips/:id/render", () => {
     expect(response.json().error).toBe("invalid_status");
   });
 
+  it("only lets one of two concurrent render requests for the same clip succeed", async () => {
+    const { token, user } = await createAuthenticatedUser("USER");
+    const clip = await createClip(user.id, "APPROVED");
+
+    const [first, second] = await Promise.all([
+      app.inject({ method: "POST", url: `/clips/${clip.id}/render`, headers: { authorization: `Bearer ${token}` } }),
+      app.inject({ method: "POST", url: `/clips/${clip.id}/render`, headers: { authorization: `Bearer ${token}` } }),
+    ]);
+
+    const statusCodes = [first.statusCode, second.statusCode].sort();
+    expect(statusCodes).toEqual([201, 400]);
+
+    const renders = await prisma.render.findMany({ where: { clipId: clip.id } });
+    expect(renders).toHaveLength(1);
+
+    const updatedClip = await prisma.clip.findUnique({ where: { id: clip.id } });
+    expect(updatedClip?.status).toBe("RENDERING");
+  });
+
   it("404s for a clip belonging to another user", async () => {
     const owner = await createAuthenticatedUser("USER");
     const stranger = await createAuthenticatedUser("USER");

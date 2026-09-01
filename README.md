@@ -167,10 +167,19 @@ Para compilar o `whisper.cpp` você mesmo:
 ```bash
 git clone --depth 1 https://github.com/ggml-org/whisper.cpp.git
 cd whisper.cpp
-cmake -B build -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release
+cmake -B build -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release \
+  -DGGML_STATIC=ON -DGGML_OPENMP=OFF \
+  -DCMAKE_EXE_LINKER_FLAGS="-static-libgcc -static-libstdc++ -static"
 cmake --build build --config Release -j
 bash models/download-ggml-model.sh base
 ```
+
+As três flags extras (`-DGGML_STATIC=ON -DGGML_OPENMP=OFF` e o linker estático)
+evitam um conflito real de DLL: sem elas, rodar `whisper-cli.exe` a partir de um
+processo iniciado pelo Git Bash falha com `STATUS_ENTRYPOINT_NOT_FOUND`, porque
+o runtime MinGW empacotado com o Git Bash (MSYS2) colide com o toolchain
+UCRT-MinGW usado pelo resto do projeto (instalado via WinGet). Linkar estático
+remove essa dependência de runtime compartilhado.
 
 `WHISPER_PATH` aponta para o `.exe` gerado em `build/bin/`; `WHISPER_MODEL_PATH`
 para o `.bin` baixado em `models/`. Use o modelo multilíngue (`base`, sem

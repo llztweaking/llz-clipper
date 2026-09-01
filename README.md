@@ -247,6 +247,8 @@ de novo. O reset não derruba sessões já ativas, só afeta o próximo login.
 - A propriedade do Prisma Client para o model `VOD` é `prisma.vOD` (Prisma
   só faz lowercase da primeira letra do nome do model), não `prisma.vod`.
 
+## Fases implementadas
+
 **Fase 2 (Desktop Shell)** está implementada: login/ativação, sidebar,
 Streamers, Configurações (aba Conta) e Admin, todos funcionais contra a
 API real. `/clips` e `/editor` agora são reais (ver Fases 4 e 5A abaixo).

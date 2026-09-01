@@ -167,6 +167,37 @@ describe("PATCH /clips/:id/edit-plan", () => {
     expect(response.json().error).toBe("invalid_segment");
   });
 
+  it("rejects a zoom point with a scale below 1", async () => {
+    const { token, user } = await createAuthenticatedUser("USER");
+    const clip = await createApprovedClip(user.id);
+
+    const response = await app.inject({
+      method: "PATCH",
+      url: `/clips/${clip.id}/edit-plan`,
+      headers: { authorization: `Bearer ${token}` },
+      payload: { ...basePayload, zooms: [{ time: 1, scale: 0.5 }] },
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json().error).toBe("invalid_body");
+  });
+
+  it("rejects a zoom point whose time is past the trimmed clip's duration", async () => {
+    const { token, user } = await createAuthenticatedUser("USER");
+    const clip = await createApprovedClip(user.id);
+
+    const response = await app.inject({
+      method: "PATCH",
+      url: `/clips/${clip.id}/edit-plan`,
+      headers: { authorization: `Bearer ${token}` },
+      // segments: [{ start: 12, end: 28 }] => a 16s clip; time=20 is past its end.
+      payload: { ...basePayload, zooms: [{ time: 20, scale: 1.3 }] },
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json().error).toBe("invalid_zoom");
+  });
+
   it("rejects an sfx file with an unsupported extension", async () => {
     const { token, user } = await createAuthenticatedUser("USER");
     const clip = await createApprovedClip(user.id);

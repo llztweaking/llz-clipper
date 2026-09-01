@@ -9,7 +9,7 @@ const IMAGE_EXTENSIONS = [".png", ".jpg", ".jpeg"];
 
 const segmentSchema = z.object({ start: z.number(), end: z.number() });
 const captionSchema = z.object({ start: z.number(), end: z.number(), text: z.string() });
-const zoomPointSchema = z.object({ time: z.number(), scale: z.number() });
+const zoomPointSchema = z.object({ time: z.number().min(0), scale: z.number().min(1).max(10) });
 const sfxCueSchema = z.object({ time: z.number(), filePath: z.string().min(1) });
 const musicTrackSchema = z.object({ filePath: z.string().min(1), volume: z.number().min(0).max(1) });
 const watermarkSchema = z.object({
@@ -70,6 +70,15 @@ export function registerEditPlanRoutes(app: FastifyInstance): void {
     }
     if (clip.vod.durationSec !== null && segments[0].end > clip.vod.durationSec) {
       return reply.code(400).send({ error: "invalid_segment", message: "Fim do corte excede a duração do VOD" });
+    }
+
+    const clipDurationSec = segments[0].end - segments[0].start;
+    for (const zoom of zooms ?? []) {
+      if (zoom.time > clipDurationSec) {
+        return reply
+          .code(400)
+          .send({ error: "invalid_zoom", message: "Ponto de zoom fora da duração do clipe" });
+      }
     }
 
     for (const cue of sfx ?? []) {

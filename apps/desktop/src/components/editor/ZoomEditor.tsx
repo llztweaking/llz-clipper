@@ -39,6 +39,7 @@ export function ZoomEditor({ zooms, onChange }: ZoomEditorProps) {
             type="number"
             step={0.1}
             min={1}
+            max={10}
             value={point.scale}
             onChange={(event) => {
               const value = event.target.valueAsNumber;

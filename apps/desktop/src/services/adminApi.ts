@@ -25,6 +25,10 @@ export function revokeKey(id: string): Promise<LicenseKey> {
   return authedRequest(`/admin/keys/${id}/revoke`, { method: "POST" });
 }
 
+export function resetDevice(id: string): Promise<LicenseKey> {
+  return authedRequest(`/admin/keys/${id}/reset-device`, { method: "POST" });
+}
+
 export function listLogs(page = 1): Promise<PaginatedResult<UsageLog>> {
   return authedRequest(`/admin/logs?page=${page}`);
 }

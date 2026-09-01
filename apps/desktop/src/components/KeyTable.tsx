@@ -3,10 +3,12 @@ import type { LicenseKey } from "../types";
 interface KeyTableProps {
   keys: LicenseKey[];
   onRevoke: (id: string) => void;
+  onResetDevice: (id: string) => void;
   revokingId?: string | null;
+  resettingId?: string | null;
 }
 
-export function KeyTable({ keys, onRevoke, revokingId = null }: KeyTableProps) {
+export function KeyTable({ keys, onRevoke, onResetDevice, revokingId = null, resettingId = null }: KeyTableProps) {
   return (
     <div className="key-table-wrapper">
       <table className="key-table">
@@ -33,6 +35,11 @@ export function KeyTable({ keys, onRevoke, revokingId = null }: KeyTableProps) {
                 {key.status !== "REVOKED" && (
                   <button disabled={revokingId === key.id} onClick={() => onRevoke(key.id)}>
                     {revokingId === key.id ? "Revogando…" : "Revogar"}
+                  </button>
+                )}
+                {key.status === "ACTIVE" && key.deviceId && (
+                  <button disabled={resettingId === key.id} onClick={() => onResetDevice(key.id)}>
+                    {resettingId === key.id ? "Resetando…" : "Resetar dispositivo"}
                   </button>
                 )}
               </td>

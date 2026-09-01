@@ -58,6 +58,7 @@ export interface LicenseKey {
   expiresAt: string | null;
   revokedAt: string | null;
   userId: string | null;
+  deviceId: string | null;
   user?: { id: string; email: string } | null;
 }
 

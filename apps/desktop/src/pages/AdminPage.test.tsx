@@ -16,6 +16,7 @@ const sampleKey = {
   expiresAt: null,
   revokedAt: null,
   userId: null,
+  deviceId: null,
 };
 
 beforeEach(() => {
@@ -23,6 +24,7 @@ beforeEach(() => {
   vi.mocked(adminApi.createKey).mockReset().mockResolvedValue(sampleKey);
   vi.mocked(adminApi.createKeysBulk).mockReset().mockResolvedValue([sampleKey, sampleKey]);
   vi.mocked(adminApi.revokeKey).mockReset().mockResolvedValue({ ...sampleKey, status: "REVOKED" });
+  vi.mocked(adminApi.resetDevice).mockReset().mockResolvedValue({ ...sampleKey, status: "ACTIVE", deviceId: null });
 });
 
 function deferred<T>() {
@@ -75,6 +77,30 @@ describe("AdminPage", () => {
     await waitFor(() => {
       expect(adminApi.revokeKey).toHaveBeenCalledWith("k1");
     });
+  });
+
+  it("resets a device on an active key with one bound", async () => {
+    vi.mocked(adminApi.listKeys).mockResolvedValue({
+      items: [{ ...sampleKey, status: "ACTIVE", deviceId: "d1" }],
+      total: 1,
+      page: 1,
+      pageSize: 20,
+    });
+    const user = userEvent.setup();
+    render(<AdminPage />);
+    await screen.findByText("LLZ-AAAA-BBBB-CCCC");
+
+    await user.click(screen.getByRole("button", { name: "Resetar dispositivo" }));
+
+    await waitFor(() => {
+      expect(adminApi.resetDevice).toHaveBeenCalledWith("k1");
+    });
+  });
+
+  it("does not show Resetar dispositivo for a key with no device bound", async () => {
+    render(<AdminPage />);
+    await screen.findByText("LLZ-AAAA-BBBB-CCCC");
+    expect(screen.queryByRole("button", { name: "Resetar dispositivo" })).not.toBeInTheDocument();
   });
 
   it("disables the generate buttons while a generate call is in flight and re-enables them after", async () => {

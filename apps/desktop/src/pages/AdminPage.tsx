@@ -9,6 +9,7 @@ export function AdminPage() {
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [revokingId, setRevokingId] = useState<string | null>(null);
+  const [resettingId, setResettingId] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [pageSize, setPageSize] = useState(20);
@@ -74,6 +75,18 @@ export function AdminPage() {
     }
   }
 
+  async function handleResetDevice(id: string) {
+    setResettingId(id);
+    try {
+      await adminApi.resetDevice(id);
+      await load();
+    } catch {
+      // Same as above — fail silently here, OfflineBanner covers the network case.
+    } finally {
+      setResettingId(null);
+    }
+  }
+
   const canGoPrev = page > 1;
   const canGoNext = page * pageSize < total;
 
@@ -107,7 +120,13 @@ export function AdminPage() {
         </div>
       ) : (
         <>
-          <KeyTable keys={keys} onRevoke={handleRevoke} revokingId={revokingId} />
+          <KeyTable
+            keys={keys}
+            onRevoke={handleRevoke}
+            onResetDevice={handleResetDevice}
+            revokingId={revokingId}
+            resettingId={resettingId}
+          />
           <div className="pagination">
             <button disabled={!canGoPrev} onClick={() => setPage((p) => p - 1)}>
               Anterior

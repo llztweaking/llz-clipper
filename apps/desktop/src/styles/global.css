@@ -303,7 +303,7 @@ select:focus {
 
 .login-page h1 {
   font-size: var(--font-size-2xl);
-  text-shadow: var(--glow-sm);
+  text-shadow: 0 0 12px rgba(255, 46, 196, 0.6);
 }
 
 .login-toggle {

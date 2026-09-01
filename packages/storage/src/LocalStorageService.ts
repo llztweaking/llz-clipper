@@ -73,4 +73,8 @@ export class LocalStorageService implements StorageService {
     await unlink(vodPath).catch(() => {});
     await unlink(thumbPath).catch(() => {});
   }
+
+  async deleteRenderOutput(outputPath: string): Promise<void> {
+    await unlink(outputPath).catch(() => {});
+  }
 }

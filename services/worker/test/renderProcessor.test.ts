@@ -1,12 +1,13 @@
 import { describe, it, expect, beforeAll, beforeEach, afterAll } from "vitest";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, rm, writeFile, access } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { prisma, resetDatabase } from "@llz-clipper/database";
 import { LocalStorageService } from "@llz-clipper/storage";
 import { FFmpegProcessor } from "@llz-clipper/ffmpeg";
+import type { VideoProcessor } from "@llz-clipper/ffmpeg";
 import { processNextRender } from "../src/renderProcessor";
 
 const execFileAsync = promisify(execFile);
@@ -95,6 +96,34 @@ describe("processNextRender", () => {
 
     const updatedClip = await prisma.clip.findUnique({ where: { id: clip.id } });
     expect(updatedClip?.status).toBe("APPROVED");
+  });
+
+  it("deletes a partially-written output file when the render fails after ffmpeg starts writing it", async () => {
+    const { clip } = await createApprovedClipWithVod(sourceVideoPath);
+    const render = await prisma.render.create({ data: { clipId: clip.id, status: "QUEUED" } });
+
+    const storageService = new LocalStorageService(storageRoot);
+    const crashingProcessor: VideoProcessor = {
+      probe: async () => {
+        throw new Error("not used");
+      },
+      generateThumbnail: async () => {},
+      getStatus: async () => ({ available: true, version: "x", path: "ffmpeg" }),
+      extractAudio: async () => {},
+      detectSceneChanges: async () => [],
+      renderClip: async (input) => {
+        await writeFile(input.outputPath, "partial ffmpeg output");
+        throw new Error("simulated ffmpeg crash mid-render");
+      },
+    };
+
+    await processNextRender(storageService, crashingProcessor);
+
+    const updatedRender = await prisma.render.findUnique({ where: { id: render.id } });
+    expect(updatedRender?.status).toBe("FAILED");
+
+    const expectedOutputPath = await storageService.prepareRenderOutput(clip.id, render.id);
+    await expect(access(expectedOutputPath)).rejects.toThrow();
   });
 
   it("processes only the oldest QUEUED render when several exist", async () => {

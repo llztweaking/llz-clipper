@@ -13,4 +13,5 @@ export interface StorageService {
   getThumbnailPath(vodId: string): string;
   deleteVod(vodId: string, extension: string): Promise<void>;
   prepareRenderOutput(clipId: string, renderId: string): Promise<string>;
+  deleteRenderOutput(outputPath: string): Promise<void>;
 }

@@ -83,6 +83,7 @@ export async function processNextRender(
 
   await prisma.render.update({ where: { id: render.id }, data: { status: "RENDERING" } });
 
+  let outputPath: string | undefined;
   try {
     if (!clip.editPlan) throw new Error("Clipe sem EditPlan");
     if (!clip.vod.storagePath) throw new Error("VOD sem arquivo armazenado");
@@ -91,7 +92,7 @@ export async function processNextRender(
     const editPlan = clip.editPlan;
     const segment = (editPlan.segments as unknown as { start: number; end: number }[])[0];
     const [targetWidth, targetHeight] = editPlan.resolution.split("x").map(Number);
-    const outputPath = await storageService.prepareRenderOutput(clip.id, render.id);
+    outputPath = await storageService.prepareRenderOutput(clip.id, render.id);
     let lastReportedPercent = -1;
     // Validated at this boundary (see resolveWatermark above) because a
     // watermark can reach here unvalidated, inherited from Streamer.watermark
@@ -132,6 +133,7 @@ export async function processNextRender(
       prisma.clip.update({ where: { id: clip.id }, data: { status: "COMPLETED" } }),
     ]);
   } catch (err) {
+    if (outputPath) await storageService.deleteRenderOutput(outputPath);
     await prisma.$transaction([
       prisma.render.update({
         where: { id: render.id },

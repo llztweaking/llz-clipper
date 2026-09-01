@@ -29,7 +29,7 @@ export function KeyTable({ keys, onRevoke, revokingId = null }: KeyTableProps) {
               <td>{key.user?.email ?? "—"}</td>
               <td>{key.expiresAt ? new Date(key.expiresAt).toLocaleDateString("pt-BR") : "—"}</td>
               <td>
-                <button onClick={() => navigator.clipboard.writeText(key.code)}>Copiar</button>
+                <button onClick={() => void navigator.clipboard.writeText(key.code).catch(() => {})}>Copiar</button>
                 {key.status !== "REVOKED" && (
                   <button disabled={revokingId === key.id} onClick={() => onRevoke(key.id)}>
                     {revokingId === key.id ? "Revogando…" : "Revogar"}

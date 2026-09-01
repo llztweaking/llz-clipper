@@ -186,7 +186,9 @@ select:focus {
 
 .app-content {
   flex: 1;
+  min-width: 0;
   overflow-y: auto;
+  overflow-x: auto;
   padding: var(--space-6);
 }
 
@@ -608,8 +610,29 @@ select:focus {
 .zoom-row,
 .sfx-row {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--space-2);
+}
+
+.caption-row input[type="number"],
+.zoom-row input[type="number"],
+.sfx-row input[type="number"] {
+  width: 70px;
+  flex: 0 0 auto;
+}
+
+.caption-row input[type="text"] {
+  flex: 1 1 160px;
+  min-width: 0;
+}
+
+.sfx-row span {
+  flex: 1 1 120px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .render-panel {

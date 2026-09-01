@@ -61,6 +61,27 @@ describe("rawRequest", () => {
     );
   });
 
+  it("does not send a Content-Type header on a bodyless request", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => ({}) });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await rawRequest("/streamers/abc", { method: "DELETE" });
+
+    const [, init] = fetchMock.mock.calls[0];
+    expect(init.headers).not.toHaveProperty("Content-Type");
+    expect(init.body).toBeUndefined();
+  });
+
+  it("sends a Content-Type header when a body is provided", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => ({}) });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await rawRequest("/streamers", { method: "POST", body: { name: "x" } });
+
+    const [, init] = fetchMock.mock.calls[0];
+    expect(init.headers).toHaveProperty("Content-Type", "application/json");
+  });
+
   it("does not attempt to parse a body on a 204 response", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, status: 204 }));
     const result = await rawRequest("/auth/logout", { method: "POST" });

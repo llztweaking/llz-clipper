@@ -14,7 +14,7 @@ export class AuthError extends Error {
   }
 }
 
-export async function login(email: string, password: string) {
+export async function login(email: string, password: string, hwid: string) {
   const user = await prisma.user.findUnique({
     where: { email },
     include: { licenseKeys: { where: { status: "ACTIVE" } } },
@@ -32,6 +32,19 @@ export async function login(email: string, password: string) {
   if (activeKey.expiresAt && activeKey.expiresAt.getTime() < Date.now()) {
     await prisma.licenseKey.update({ where: { id: activeKey.id }, data: { status: "EXPIRED" } });
     throw new AuthError(403, "license_expired", "Licença expirada");
+  }
+
+  if (activeKey.deviceId === null) {
+    let device = await prisma.device.findUnique({ where: { hwid } });
+    if (!device) {
+      device = await prisma.device.create({ data: { hwid, userId: user.id } });
+    }
+    await prisma.licenseKey.update({ where: { id: activeKey.id }, data: { deviceId: device.id } });
+  } else {
+    const device = await prisma.device.findUnique({ where: { id: activeKey.deviceId } });
+    if (device?.hwid !== hwid) {
+      throw new AuthError(403, "hwid_mismatch", "Esta licença já está em uso em outro dispositivo.");
+    }
   }
 
   await prisma.usageLog.create({ data: { userId: user.id, action: "login" } });

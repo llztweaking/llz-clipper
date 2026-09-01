@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import type { FastifyInstance } from "fastify";
+import bcrypt from "bcryptjs";
 import { prisma, resetDatabase } from "@llz-clipper/database";
 import { buildApp } from "../src/app";
 
@@ -28,7 +29,7 @@ describe("POST /auth/login", () => {
     const response = await app.inject({
       method: "POST",
       url: "/auth/login",
-      payload: { email: "session@example.com", password: "supersecret123" },
+      payload: { email: "session@example.com", password: "supersecret123", hwid: "hwid-session" },
     });
     expect(response.statusCode).toBe(200);
     expect(response.json().accessToken).toBeDefined();
@@ -39,7 +40,7 @@ describe("POST /auth/login", () => {
     const response = await app.inject({
       method: "POST",
       url: "/auth/login",
-      payload: { email: "session@example.com", password: "wrong-password" },
+      payload: { email: "session@example.com", password: "wrong-password", hwid: "hwid-session" },
     });
     expect(response.statusCode).toBe(401);
   });
@@ -51,13 +52,71 @@ describe("POST /auth/login", () => {
     const response = await app.inject({
       method: "POST",
       url: "/auth/login",
-      payload: { email: "session@example.com", password: "supersecret123" },
+      payload: { email: "session@example.com", password: "supersecret123", hwid: "hwid-session" },
     });
     expect(response.statusCode).toBe(403);
     expect(response.json().error).toBe("license_expired");
 
     const key = await prisma.licenseKey.findFirst();
     expect(key?.status).toBe("EXPIRED");
+  });
+
+  it("rejects a login request with no hwid", async () => {
+    await activate();
+    const response = await app.inject({
+      method: "POST",
+      url: "/auth/login",
+      payload: { email: "session@example.com", password: "supersecret123" },
+    });
+    expect(response.statusCode).toBe(400);
+    expect(response.json().error).toBe("invalid_body");
+  });
+
+  it("binds the device on first login when the key has no device yet (e.g. a directly-seeded key)", async () => {
+    const passwordHash = await bcrypt.hash("supersecret123", 10);
+    const user = await prisma.user.create({ data: { email: "nodevice@example.com", passwordHash } });
+    await prisma.licenseKey.create({
+      data: {
+        code: "LLZ-NODV-0001-0001",
+        plan: "MONTHLY",
+        status: "ACTIVE",
+        activatedAt: new Date(),
+        expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 30),
+        userId: user.id,
+      },
+    });
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/auth/login",
+      payload: { email: "nodevice@example.com", password: "supersecret123", hwid: "hwid-first-bind" },
+    });
+
+    expect(response.statusCode).toBe(200);
+    const key = await prisma.licenseKey.findFirst({ where: { userId: user.id }, include: { device: true } });
+    expect(key?.device?.hwid).toBe("hwid-first-bind");
+  });
+
+  it("allows a second login from the same hwid the key is already bound to", async () => {
+    await activate();
+    const response = await app.inject({
+      method: "POST",
+      url: "/auth/login",
+      payload: { email: "session@example.com", password: "supersecret123", hwid: "hwid-session" },
+    });
+    expect(response.statusCode).toBe(200);
+  });
+
+  it("rejects a login from a different hwid than the one the key is bound to", async () => {
+    await activate();
+    const response = await app.inject({
+      method: "POST",
+      url: "/auth/login",
+      payload: { email: "session@example.com", password: "supersecret123", hwid: "some-other-machine" },
+    });
+    expect(response.statusCode).toBe(403);
+    expect(response.json().error).toBe("hwid_mismatch");
+    expect(response.json().message).toBe("Esta licença já está em uso em outro dispositivo.");
   });
 });
 

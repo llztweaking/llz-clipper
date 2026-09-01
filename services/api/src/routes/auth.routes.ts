@@ -14,6 +14,7 @@ const activateKeySchema = z.object({
 const loginSchema = z.object({
   email: z.string().email(),
   password: z.string().min(1),
+  hwid: z.string().min(1),
 });
 
 const refreshOrLogoutSchema = z.object({ refreshToken: z.string().min(1) });
@@ -45,7 +46,7 @@ export function registerAuthRoutes(app: FastifyInstance): void {
       return reply.code(400).send({ error: "invalid_body", message: parsed.error.message });
     }
     try {
-      const result = await login(parsed.data.email, parsed.data.password);
+      const result = await login(parsed.data.email, parsed.data.password, parsed.data.hwid);
       return reply.code(200).send(result);
     } catch (err) {
       if (err instanceof AuthError) {

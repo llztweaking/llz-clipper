@@ -222,6 +222,18 @@ Quando o render termina, o botão **Abrir arquivo** aparece tanto na tela
 do editor quanto no card do clipe na tela **Clipes**, e abre o arquivo
 final no explorador de arquivos do Windows.
 
+## Vínculo de dispositivo (HWID)
+
+Cada key só pode estar ativa em um dispositivo por vez. Na ativação
+(`Ativar licença`) e em todo login (`Já tenho conta`), o desktop envia o
+HWID da máquina (`invoke("get_hwid")`, já usado desde a ativação). Se a
+key ainda não tem dispositivo vinculado, o primeiro login vincula o HWID
+automaticamente; se já tem, um login de um HWID diferente é recusado com
+"Esta licença já está em uso em outro dispositivo." Um admin pode liberar
+a key para um novo dispositivo pelo botão **Resetar dispositivo** na tela
+Admin (ao lado de **Revogar**) — o próximo login de qualquer HWID vincula
+de novo. O reset não derruba sessões já ativas, só afeta o próximo login.
+
 ## Notas técnicas relevantes
 
 - **Prisma está pinado em v6.19.3** (não a versão mais recente instalável).
@@ -234,8 +246,6 @@ final no explorador de arquivos do Windows.
   a instalação pesada do Visual Studio Build Tools nesta máquina.
 - A propriedade do Prisma Client para o model `VOD` é `prisma.vOD` (Prisma
   só faz lowercase da primeira letra do nome do model), não `prisma.vod`.
-
-## O que NÃO está implementado nesta fase
 
 **Fase 2 (Desktop Shell)** está implementada: login/ativação, sidebar,
 Streamers, Configurações (aba Conta) e Admin, todos funcionais contra a
@@ -258,6 +268,3 @@ zoom, SFX, música e marca d'água por clipe aprovado, com prévia real
 (queima de legenda, zoom, mixagem de áudio, watermark) via FFmpeg, através
 de um segundo loop de polling no worker, com progresso exibido no editor e
 abertura do arquivo final via "Abrir arquivo" (editor e tela de Clipes).
-
-- Device-lock / limite de dispositivos por key, renovação de key — schema
-  preparado, sem endpoint ainda

@@ -405,6 +405,10 @@ select:focus {
   font-size: var(--font-size-sm);
 }
 
+.key-table-wrapper {
+  overflow-x: auto;
+}
+
 .key-table {
   width: 100%;
   border-collapse: collapse;

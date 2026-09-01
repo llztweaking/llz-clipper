@@ -22,7 +22,8 @@ export function useAuth() {
 
   const login = useCallback(
     async (email: string, password: string) => {
-      const result = await authApi.login({ email, password });
+      const hwid = await invoke<string>("get_hwid");
+      const result = await authApi.login({ email, password, hwid });
       await invoke("save_session", { refreshToken: result.refreshToken });
       setSession(result.accessToken, result.refreshToken, result.user);
     },

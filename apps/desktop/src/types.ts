@@ -27,6 +27,7 @@ export interface ActivateKeyInput {
 export interface LoginInput {
   email: string;
   password: string;
+  hwid: string;
 }
 
 export interface LicenseSummary {

@@ -51,7 +51,11 @@ describe("useAuth", () => {
     expect(result.current.isAuthenticated).toBe(true);
   });
 
-  it("login() calls login, saves the session, and updates the store", async () => {
+  it("login() gets the hwid, calls login, saves the session, and updates the store", async () => {
+    invokeMock.mockImplementation((cmd: string) => {
+      if (cmd === "get_hwid") return Promise.resolve("hwid-456");
+      return Promise.resolve(undefined);
+    });
     vi.mocked(authApi.login).mockResolvedValue({
       accessToken: "at2",
       refreshToken: "rt2",
@@ -63,7 +67,7 @@ describe("useAuth", () => {
       await result.current.login("a@a.com", "pw123456");
     });
 
-    expect(authApi.login).toHaveBeenCalledWith({ email: "a@a.com", password: "pw123456" });
+    expect(authApi.login).toHaveBeenCalledWith({ email: "a@a.com", password: "pw123456", hwid: "hwid-456" });
     expect(invokeMock).toHaveBeenCalledWith("save_session", { refreshToken: "rt2" });
     expect(useAuthStore.getState().accessToken).toBe("at2");
   });

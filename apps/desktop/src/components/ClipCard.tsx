@@ -44,6 +44,9 @@ export function ClipCard({ clip, onApprove, onReject, onEdit }: ClipCardProps) {
       {clip.status === "APPROVED" && (
         <div className="clip-actions">
           <p className="clip-status-approved">Aprovado</p>
+          {clip.latestRender?.status === "FAILED" && (
+            <p className="form-error">{clip.latestRender.error ?? "Falha ao renderizar"}</p>
+          )}
           {onEdit && <button onClick={onEdit}>Editar</button>}
         </div>
       )}

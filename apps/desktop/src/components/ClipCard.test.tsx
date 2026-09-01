@@ -80,6 +80,32 @@ describe("ClipCard", () => {
     expect(screen.getByText(/55%/)).toBeInTheDocument();
   });
 
+  it("shows the render error for an APPROVED clip whose last render FAILED", () => {
+    render(
+      <ClipCard
+        clip={{
+          ...baseClip,
+          status: "APPROVED",
+          latestRender: {
+            id: "r1",
+            clipId: "c1",
+            status: "FAILED",
+            progress: 40,
+            outputPath: null,
+            error: "ffmpeg encerrou com código 1",
+            createdAt: "2026-01-01T00:00:00.000Z",
+            finishedAt: "2026-01-01T00:01:00.000Z",
+          },
+        }}
+        onApprove={vi.fn()}
+        onReject={vi.fn()}
+      />
+    );
+
+    expect(screen.getByText("Aprovado")).toBeInTheDocument();
+    expect(screen.getByText("ffmpeg encerrou com código 1")).toBeInTheDocument();
+  });
+
   it("shows an Abrir arquivo button for a COMPLETED clip and opens the file when clicked", async () => {
     const user = userEvent.setup();
     render(

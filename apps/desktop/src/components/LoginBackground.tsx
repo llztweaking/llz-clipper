@@ -21,17 +21,12 @@ function generateParticles(): Particle[] {
   }));
 }
 
-function prefersReducedMotion(): boolean {
-  return typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches === true;
-}
-
 export function LoginBackground() {
   const [particles] = useState(generateParticles);
   const glowRef = useRef<HTMLDivElement>(null);
   const particlesRef = useRef<HTMLDivElement>(null);
 
   function handleMouseMove(event: MouseEvent<HTMLDivElement>) {
-    if (prefersReducedMotion()) return;
     const rect = event.currentTarget.getBoundingClientRect();
     const relX = (event.clientX - rect.left) / rect.width - 0.5;
     const relY = (event.clientY - rect.top) / rect.height - 0.5;

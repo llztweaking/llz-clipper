@@ -970,39 +970,3 @@ select:focus {
   border: 0;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  h1::before,
-  h1::after,
-  .btn-primary,
-  .skeleton-line,
-  .login-glow::before,
-  .login-glow::after,
-  .login-particle,
-  .login-tagline-text,
-  .login-field-enter {
-    animation: none;
-  }
-
-  .streamer-card,
-  .vod-card,
-  .clip-card,
-  .caption-editor,
-  .zoom-editor,
-  .sfx-editor,
-  .music-picker,
-  .watermark-picker,
-  .streamer-card::before,
-  .vod-card::before,
-  .clip-card::before,
-  .caption-editor::before,
-  .zoom-editor::before,
-  .sfx-editor::before,
-  .music-picker::before,
-  .watermark-picker::before,
-  .login-toggle button,
-  .login-page .btn-primary,
-  .login-glow,
-  .login-particles {
-    transition: none;
-  }
-}

@@ -2,6 +2,8 @@ import { useState, type FormEvent } from "react";
 import { useAuth } from "../hooks/useAuth";
 import { ApiError } from "../services/apiClient";
 import { Logo } from "../components/Logo";
+import { LoginBackground } from "../components/LoginBackground";
+import { LoginTagline } from "../components/LoginTagline";
 
 type Mode = "activate" | "login";
 
@@ -33,6 +35,7 @@ export function LoginPage() {
 
   return (
     <div className="login-page">
+      <LoginBackground />
       <h1>
         <Logo size="lg" />
       </h1>
@@ -45,33 +48,47 @@ export function LoginPage() {
         </button>
       </div>
       <form onSubmit={handleSubmit}>
-        {mode === "activate" && (
+        <div className="login-fields" key={mode}>
+          {mode === "activate" && (
+            <input
+              placeholder="LUC-XXXX-XXXX-XXXX"
+              value={code}
+              onChange={(event) => setCode(event.target.value)}
+              className="login-field-enter"
+              style={{ animationDelay: "0s" }}
+              required
+            />
+          )}
           <input
-            placeholder="LUC-XXXX-XXXX-XXXX"
-            value={code}
-            onChange={(event) => setCode(event.target.value)}
+            type="email"
+            placeholder="Email"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+            className="login-field-enter"
+            style={{ animationDelay: mode === "activate" ? "0.06s" : "0s" }}
             required
           />
-        )}
-        <input
-          type="email"
-          placeholder="Email"
-          value={email}
-          onChange={(event) => setEmail(event.target.value)}
-          required
-        />
-        <input
-          type="password"
-          placeholder="Senha"
-          value={password}
-          onChange={(event) => setPassword(event.target.value)}
-          required
-        />
-        {error && <p className="form-error">{error}</p>}
-        <button type="submit" className="btn-primary" disabled={loading}>
-          {loading ? "Aguarde…" : mode === "activate" ? "Ativar acesso" : "Entrar"}
-        </button>
+          <input
+            type="password"
+            placeholder="Senha"
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            className="login-field-enter"
+            style={{ animationDelay: mode === "activate" ? "0.12s" : "0.06s" }}
+            required
+          />
+          {error && <p className="form-error">{error}</p>}
+          <button
+            type="submit"
+            className="btn-primary login-field-enter"
+            style={{ animationDelay: mode === "activate" ? "0.18s" : "0.12s" }}
+            disabled={loading}
+          >
+            {loading ? "Aguarde…" : mode === "activate" ? "Ativar acesso" : "Entrar"}
+          </button>
+        </div>
       </form>
+      <LoginTagline />
     </div>
   );
 }

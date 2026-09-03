@@ -17,7 +17,7 @@ export class AuthError extends Error {
 export async function login(email: string, password: string, hwid: string) {
   const user = await prisma.user.findUnique({
     where: { email },
-    include: { licenseKeys: { where: { status: "ACTIVE" } } },
+    include: { licenseKeys: { where: { status: "ACTIVE" }, orderBy: { activatedAt: "desc" } } },
   });
 
   if (!user || !user.passwordHash || !(await bcrypt.compare(password, user.passwordHash))) {

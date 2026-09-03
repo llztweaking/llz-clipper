@@ -36,10 +36,13 @@ export async function activateKey(input: ActivateKeyInput) {
     throw new LicenseError(409, "key_already_linked", "Key já vinculada a outra conta");
   }
 
-  const passwordHash = await bcrypt.hash(input.password, 10);
-
   let user = await prisma.user.findUnique({ where: { email: input.email } });
-  if (!user) {
+  if (user) {
+    if (!user.passwordHash || !(await bcrypt.compare(input.password, user.passwordHash))) {
+      throw new LicenseError(401, "invalid_credentials", "Email ou senha inválidos");
+    }
+  } else {
+    const passwordHash = await bcrypt.hash(input.password, 10);
     user = await prisma.user.create({ data: { email: input.email, passwordHash } });
   }
 

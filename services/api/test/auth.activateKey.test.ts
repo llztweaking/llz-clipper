@@ -87,6 +87,59 @@ describe("POST /auth/activate-key", () => {
     expect(response.json().error).toBe("key_already_linked");
   });
 
+  it("rejects activating a second key onto an existing account with the wrong password", async () => {
+    const firstKey = await createUnusedKey();
+    await app.inject({
+      method: "POST",
+      url: "/auth/activate-key",
+      payload: { code: firstKey.code, email: "reused@example.com", password: "the-real-password", hwid: "hwid-first" },
+    });
+
+    const secondKey = await createUnusedKey();
+    const response = await app.inject({
+      method: "POST",
+      url: "/auth/activate-key",
+      payload: {
+        code: secondKey.code,
+        email: "reused@example.com",
+        password: "a-guessed-wrong-password",
+        hwid: "hwid-attacker",
+      },
+    });
+
+    expect(response.statusCode).toBe(401);
+    expect(response.json().error).toBe("invalid_credentials");
+
+    const untouchedSecondKey = await prisma.licenseKey.findUnique({ where: { id: secondKey.id } });
+    expect(untouchedSecondKey?.status).toBe("UNUSED");
+    expect(untouchedSecondKey?.userId).toBeNull();
+  });
+
+  it("activates a second key onto an existing account when the correct password is given", async () => {
+    const firstKey = await createUnusedKey();
+    await app.inject({
+      method: "POST",
+      url: "/auth/activate-key",
+      payload: { code: firstKey.code, email: "reused@example.com", password: "the-real-password", hwid: "hwid-first" },
+    });
+
+    const secondKey = await createUnusedKey();
+    const response = await app.inject({
+      method: "POST",
+      url: "/auth/activate-key",
+      payload: {
+        code: secondKey.code,
+        email: "reused@example.com",
+        password: "the-real-password",
+        hwid: "hwid-second",
+      },
+    });
+
+    expect(response.statusCode).toBe(201);
+    const updatedSecondKey = await prisma.licenseKey.findUnique({ where: { id: secondKey.id } });
+    expect(updatedSecondKey?.status).toBe("ACTIVE");
+  });
+
   it("sets expiresAt ~30 days out for MONTHLY and ~90 days out for QUARTERLY", async () => {
     const monthly = await createUnusedKey("MONTHLY");
     const quarterly = await createUnusedKey("QUARTERLY");

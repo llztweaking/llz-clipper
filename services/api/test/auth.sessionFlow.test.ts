@@ -97,6 +97,43 @@ describe("POST /auth/login", () => {
     expect(key?.device?.hwid).toBe("hwid-first-bind");
   });
 
+  it("consistently picks the most-recently-activated ACTIVE key when a user has more than one", async () => {
+    const passwordHash = await bcrypt.hash("supersecret123", 10);
+    const user = await prisma.user.create({ data: { email: "twokeys@example.com", passwordHash } });
+    const olderKey = await prisma.licenseKey.create({
+      data: {
+        code: "LLZ-OLDR-0001-0001",
+        plan: "MONTHLY",
+        status: "ACTIVE",
+        activatedAt: new Date(Date.now() - 60_000),
+        expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 30),
+        userId: user.id,
+      },
+    });
+    const newerKey = await prisma.licenseKey.create({
+      data: {
+        code: "LLZ-NEWR-0001-0001",
+        plan: "MONTHLY",
+        status: "ACTIVE",
+        activatedAt: new Date(),
+        expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 30),
+        userId: user.id,
+      },
+    });
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/auth/login",
+      payload: { email: "twokeys@example.com", password: "supersecret123", hwid: "hwid-twokeys" },
+    });
+
+    expect(response.statusCode).toBe(200);
+    const updatedNewer = await prisma.licenseKey.findUnique({ where: { id: newerKey.id } });
+    const updatedOlder = await prisma.licenseKey.findUnique({ where: { id: olderKey.id } });
+    expect(updatedNewer?.deviceId).not.toBeNull();
+    expect(updatedOlder?.deviceId).toBeNull();
+  });
+
   it("allows a second login from the same hwid the key is already bound to", async () => {
     await activate();
     const response = await app.inject({

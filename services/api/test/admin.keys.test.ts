@@ -62,6 +62,28 @@ describe("GET /admin/keys", () => {
     expect(body.items).toHaveLength(1);
     expect(body.items[0].status).toBe("REVOKED");
   });
+
+  it("never exposes the linked user's passwordHash", async () => {
+    const user = await prisma.user.create({
+      data: { email: `owner-${Date.now()}@example.com`, passwordHash: "super-secret-bcrypt-hash" },
+    });
+    await prisma.licenseKey.create({
+      data: { code: "LLZ-LIST-0003-0003", plan: "MONTHLY", status: "ACTIVE", userId: user.id },
+    });
+
+    const response = await app.inject({
+      method: "GET",
+      url: "/admin/keys",
+      headers: { authorization: `Bearer ${adminToken}` },
+    });
+
+    expect(response.statusCode).toBe(200);
+    const body = response.json();
+    const key = body.items.find((item: { userId: string | null }) => item.userId === user.id);
+    expect(key.user).toEqual({ id: user.id, email: user.email });
+    expect(key.user.passwordHash).toBeUndefined();
+    expect(JSON.stringify(body)).not.toContain("super-secret-bcrypt-hash");
+  });
 });
 
 describe("POST /admin/keys/:id/revoke", () => {

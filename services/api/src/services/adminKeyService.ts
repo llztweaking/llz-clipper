@@ -42,7 +42,7 @@ export async function listKeys(filters: ListKeysFilters) {
   const [items, total] = await Promise.all([
     prisma.licenseKey.findMany({
       where,
-      include: { user: true },
+      include: { user: { select: { id: true, email: true } } },
       skip: (filters.page - 1) * filters.pageSize,
       take: filters.pageSize,
       orderBy: { createdAt: "desc" },

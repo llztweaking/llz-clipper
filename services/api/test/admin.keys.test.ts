@@ -138,6 +138,25 @@ describe("POST /admin/keys/:id/reset-device", () => {
     expect(response.statusCode).toBe(404);
   });
 
+  it("blocks a non-admin user with 403", async () => {
+    const owner = await prisma.user.create({ data: { email: `owner2-${Date.now()}@example.com`, passwordHash: "x" } });
+    const device = await prisma.device.create({ data: { hwid: "hwid-reset-guard", userId: owner.id } });
+    const key = await prisma.licenseKey.create({
+      data: { code: "LLZ-RSET-0002-0002", plan: "MONTHLY", status: "ACTIVE", deviceId: device.id },
+    });
+    const { token: userToken } = await createAuthenticatedUser("USER");
+
+    const response = await app.inject({
+      method: "POST",
+      url: `/admin/keys/${key.id}/reset-device`,
+      headers: { authorization: `Bearer ${userToken}` },
+    });
+
+    expect(response.statusCode).toBe(403);
+    const untouched = await prisma.licenseKey.findUnique({ where: { id: key.id } });
+    expect(untouched?.deviceId).toBe(device.id);
+  });
+
   it("actually unblocks a login from a different device after reset", async () => {
     const key = await prisma.licenseKey.create({ data: { code: "LLZ-RSE2-0001-0001", plan: "MONTHLY" } });
 

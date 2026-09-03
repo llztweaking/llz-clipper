@@ -43,6 +43,9 @@ export async function login(email: string, password: string, hwid: string) {
   } else {
     const device = await prisma.device.findUnique({ where: { id: activeKey.deviceId } });
     if (device?.hwid !== hwid) {
+      await prisma.usageLog.create({
+        data: { userId: user.id, action: "login_hwid_mismatch", metadata: { keyId: activeKey.id } },
+      });
       throw new AuthError(403, "hwid_mismatch", "Esta licença já está em uso em outro dispositivo.");
     }
   }
